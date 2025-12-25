@@ -16,6 +16,7 @@ import rbacRouter from './routes/rbac.js'
 import clickjackingRouter from './routes/clickjacking.js'
 import infoleakRouter from './routes/infoleak.js'
 import replayRouter from './routes/replay.js'
+import fileuploadRouter from './routes/fileupload.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -38,6 +39,7 @@ app.use('/rbac', express.static(join(__dirname, '../client/rbac')))
 app.use('/clickjacking', express.static(join(__dirname, '../client/clickjacking')))
 app.use('/infoleak', express.static(join(__dirname, '../client/infoleak')))
 app.use('/replay', express.static(join(__dirname, '../client/replay')))
+app.use('/fileupload', express.static(join(__dirname, '../client/fileupload')))
 app.use('/', express.static(join(__dirname, '../client')))
 
 // API 路由
@@ -54,6 +56,7 @@ app.use('/api/rbac', rbacRouter)
 app.use('/api/clickjacking', clickjackingRouter)
 app.use('/api/infoleak', infoleakRouter)
 app.use('/api/replay', replayRouter)
+app.use('/api/fileupload', fileuploadRouter)
 
 // 首页
 app.get('/', (req, res) => {

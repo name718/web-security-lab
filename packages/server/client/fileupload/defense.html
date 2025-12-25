@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>安全上传方案 - 文件上传漏洞</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .upload-box { border: 2px solid #4caf50; padding: 20px; border-radius: 8px; margin: 15px 0; background: #f1f8e9; }
+    .check-item { padding: 8px; margin: 5px 0; background: white; border-radius: 4px; display: flex; align-items: center; }
+    .check-icon { margin-right: 10px; font-size: 18px; }
+    .result-box { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回文件上传漏洞</a>
+    <h1>🛡️ 实验三：安全上传方案</h1>
+
+    <div class="info-box">
+      <strong>多重验证策略</strong>
+      <p>安全的文件上传需要多层防护，不能只依赖单一检查</p>
+    </div>
+
+    <section>
+      <h2>🎮 安全上传演示</h2>
+      
+      <div class="upload-box">
+        <h3>✅ 安全上传接口</h3>
+        <div>
+          <label>文件名:</label>
+          <input type="text" id="filename" value="avatar.jpg" style="width: 300px; padding: 8px; margin: 5px;">
+        </div>
+        <div>
+          <label>MIME:</label>
+          <input type="text" id="mime" value="image/jpeg" style="width: 300px; padding: 8px; margin: 5px;">
+        </div>
+        <button onclick="uploadSafe()" class="btn">安全上传</button>
+        <button onclick="tryBypass()" class="btn" style="background: #f44336;">尝试绕过 (shell.php.jpg)</button>
+      </div>
+
+      <h3>验证步骤</h3>
+      <div id="checks">
+        <div class="check-item"><span class="check-icon">⏳</span> 扩展名白名单检查</div>
+        <div class="check-item"><span class="check-icon">⏳</span> 双扩展名检测</div>
+        <div class="check-item"><span class="check-icon">⏳</span> MIME 类型验证</div>
+        <div class="check-item"><span class="check-icon">⏳</span> 文件重命名</div>
+      </div>
+
+      <div class="result-box" id="result">点击上传查看结果...</div>
+    </section>
+
+    <section>
+      <h2>📋 安全检查清单</h2>
+      <table class="info-table">
+        <tr><th>检查项</th><th>方法</th><th>目的</th></tr>
+        <tr><td>扩展名</td><td>白名单验证</td><td>只允许安全的扩展名</td></tr>
+        <tr><td>双扩展名</td><td>检查所有 . 分隔部分</td><td>防止 shell.php.jpg</td></tr>
+        <tr><td>MIME 类型</td><td>白名单 + 魔数验证</td><td>防止 MIME 伪造</td></tr>
+        <tr><td>文件大小</td><td>限制最大尺寸</td><td>防止 DoS</td></tr>
+        <tr><td>文件重命名</td><td>随机生成文件名</td><td>防止路径遍历</td></tr>
+        <tr><td>存储位置</td><td>非 Web 可访问目录</td><td>防止直接执行</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>💻 完整安全代码</h2>
+      <pre><code>const multer = require('multer')
+const fileType = require('file-type')
+const path = require('path')
+const crypto = require('crypto')
+
+const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/gif']
+const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+
+const storage = multer.diskStorage({
+  destination: './uploads/', // 非 public 目录
+  filename: (req, file, cb) => {
+    // 随机文件名
+    const ext = path.extname(file.originalname).toLowerCase()
+    const name = crypto.randomBytes(16).toString('hex')
+    cb(null, name + ext)
+  }
+})
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_SIZE },
+  fileFilter: async (req, file, cb) => {
+    // 1. 检查扩展名
+    const ext = path.extname(file.originalname).toLowerCase()
+    if (!['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+      return cb(new Error('不允许的扩展名'))
+    }
+    
+    // 2. 检查双扩展名
+    if (file.originalname.split('.').length > 2) {
+      return cb(new Error('检测到双扩展名'))
+    }
+    
+    // 3. 检查 MIME
+    if (!ALLOWED_MIMES.includes(file.mimetype)) {
+      return cb(new Error('不允许的 MIME 类型'))
+    }
+    
+    cb(null, true)
+  }
+})
+
+// 上传后验证文件内容
+app.post('/upload', upload.single('file'), async (req, res) => {
+  const buffer = fs.readFileSync(req.file.path)
+  const type = await fileType.fromBuffer(buffer)
+  
+  if (!type || !ALLOWED_MIMES.includes(type.mime)) {
+    fs.unlinkSync(req.file.path) // 删除文件
+    return res.status(400).json({ error: '文件内容与类型不符' })
+  }
+  
+  res.json({ success: true, filename: req.file.filename })
+})</code></pre>
+    </section>
+  </div>
+
+  <script>
+    function updateChecks(results) {
+      const checks = document.getElementById('checks').children
+      const icons = ['✅', '❌']
+      results.forEach((passed, i) => {
+        checks[i].querySelector('.check-icon').textContent = passed ? '✅' : '❌'
+        checks[i].style.background = passed ? '#e8f5e9' : '#ffebee'
+      })
+    }
+    
+    async function uploadSafe() {
+      const filename = document.getElementById('filename').value
+      const mime = document.getElementById('mime').value
+      
+      updateChecks([true, true, true, true])
+      
+      const res = await fetch('/api/fileupload/safe/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, mime, content: 'safe content' })
+      })
+      const data = await res.json()
+      
+      document.getElementById('result').innerHTML = `
+        <span style="color: ${data.success ? '#4caf50' : '#f44336'}">
+          ${data.success ? '✅ 安全上传成功' : '❌ ' + data.error}
+        </span>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `
+    }
+    
+    async function tryBypass() {
+      document.getElementById('filename').value = 'shell.php.jpg'
+      document.getElementById('mime').value = 'image/jpeg'
+      
+      const res = await fetch('/api/fileupload/safe/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          filename: 'shell.php.jpg', 
+          mime: 'image/jpeg', 
+          content: '<?php system($_GET["cmd"]); ?>' 
+        })
+      })
+      const data = await res.json()
+      
+      updateChecks([true, false, true, false])
+      
+      document.getElementById('result').innerHTML = `
+        <span style="color: ${data.success ? '#4caf50' : '#f44336'}">
+          ${data.success ? '⚠️ 绕过成功' : '✅ 攻击被阻止: ' + data.error}
+        </span>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `
+    }
+  </script>
+</body>
+</html>

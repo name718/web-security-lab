@@ -54,7 +54,8 @@ export default {
           text: '信息与会话',
           items: [
             { text: '敏感信息泄露', link: '/labs/infoleak' },
-            { text: 'Token 重放攻击', link: '/labs/replay' }
+            { text: 'Token 重放攻击', link: '/labs/replay' },
+            { text: '文件上传漏洞', link: '/labs/fileupload' }
           ]
         }
       ]
@@ -64,7 +65,7 @@ export default {
     ],
     footer: {
       message: '仅供学习目的，请勿用于非法用途',
-      copyright: 'Security Lab © 2024'
+      copyright: 'Security Lab © 2025'
     }
   }
 }
