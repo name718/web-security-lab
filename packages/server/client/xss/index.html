@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XSS Lab - 跨站脚本攻击实验</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔴 XSS Lab</h1>
+      <p class="subtitle">跨站脚本攻击实验平台</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ 免责声明</strong>
+      <p>本实验仅供学习目的，请勿将所学知识用于非法用途！</p>
+    </div>
+
+    <section class="intro">
+      <h2>什么是 XSS？</h2>
+      <p>XSS (Cross-Site Scripting) 是一种代码注入攻击。攻击者通过在网页中注入恶意脚本，当其他用户浏览该页面时，脚本会在用户浏览器中执行。</p>
+      <div class="types">
+        <div class="type-card">
+          <h3>反射型 XSS</h3>
+          <p>恶意脚本来自当前 HTTP 请求，不存储在服务器</p>
+        </div>
+        <div class="type-card">
+          <h3>存储型 XSS</h3>
+          <p>恶意脚本被存储在服务器，所有访问者都会中招</p>
+        </div>
+        <div class="type-card">
+          <h3>DOM 型 XSS</h3>
+          <p>漏洞存在于客户端代码，不经过服务器</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="labs">
+      <h2>📚 实验列表</h2>
+      
+      <a href="search.html" class="lab-card">
+        <div class="lab-icon">🔍</div>
+        <div class="lab-info">
+          <h3>实验一：反射型 XSS</h3>
+          <p>通过搜索功能演示反射型 XSS 攻击原理</p>
+          <span class="difficulty easy">入门</span>
+        </div>
+      </a>
+
+      <a href="comment.html" class="lab-card">
+        <div class="lab-icon">💬</div>
+        <div class="lab-info">
+          <h3>实验二：存储型 XSS</h3>
+          <p>通过评论系统演示存储型 XSS，危害更大</p>
+          <span class="difficulty medium">进阶</span>
+        </div>
+      </a>
+
+      <a href="steal.html" class="lab-card">
+        <div class="lab-icon">🔑</div>
+        <div class="lab-info">
+          <h3>实验三：XSS 窃取凭证</h3>
+          <p>演示如何通过 XSS 窃取用户 Token</p>
+          <span class="difficulty hard">高级</span>
+        </div>
+      </a>
+    </section>
+
+    <section class="defense">
+      <h2>🛡️ 防御方案</h2>
+      <ul>
+        <li><strong>输出转义</strong> - 对用户输入进行 HTML 实体编码</li>
+        <li><strong>避免 innerHTML</strong> - 使用 textContent 代替</li>
+        <li><strong>CSP 策略</strong> - Content-Security-Policy: script-src 'self'</li>
+        <li><strong>HttpOnly Cookie</strong> - 防止 JS 读取敏感 Cookie</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

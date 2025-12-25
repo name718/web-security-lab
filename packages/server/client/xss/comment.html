@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验二：存储型 XSS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回首页</a>
+    </nav>
+
+    <header>
+      <h1>💬 实验二：存储型 XSS</h1>
+      <p class="subtitle">Stored XSS Attack</p>
+    </header>
+
+    <section>
+      <h2>📖 原理说明</h2>
+      <p>存储型 XSS 是最危险的 XSS 类型：</p>
+      <ol style="margin: 1rem 0 0 1.5rem;">
+        <li>攻击者提交包含恶意脚本的内容（如评论）</li>
+        <li>服务器将恶意内容存储到数据库</li>
+        <li>其他用户访问页面时，恶意脚本被加载执行</li>
+        <li><strong>所有访问该页面的用户都会中招！</strong></li>
+      </ol>
+      <div class="warning-box" style="margin-top: 1rem;">
+        <strong>⚠️ 危害对比</strong>
+        <p>反射型 XSS：需要诱导用户点击链接</p>
+        <p>存储型 XSS：用户正常访问就会中招，危害更大！</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 漏洞演示 - 评论系统</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked onchange="loadComments()"> 
+          ❌ 有漏洞版本 (innerHTML)
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe" onchange="loadComments()"> 
+          ✅ 安全版本 (转义)
+        </label>
+      </div>
+
+      <div style="margin: 1rem 0;">
+        <input type="text" id="authorInput" placeholder="昵称（可选）" style="margin-bottom: 0.5rem;">
+        <textarea id="commentInput" rows="3" placeholder="输入评论内容..."></textarea>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+          <button class="btn" onclick="submitComment()">发表评论</button>
+          <button class="btn btn-secondary" onclick="clearComments()">清空评论</button>
+        </div>
+      </div>
+
+      <div class="warning-box">
+        <strong>💡 尝试以下 Payload：</strong>
+        <p style="margin-top: 0.5rem;">
+          <code>&lt;script&gt;alert('存储型XSS')&lt;/script&gt;</code>
+        </p>
+        <p style="margin-top: 0.5rem;">
+          <code>&lt;img src=x onerror="alert('存储型XSS')"&gt;</code>
+        </p>
+        <p style="margin-top: 0.5rem;">
+          <code>&lt;div onmouseover="alert('hover触发')"&gt;鼠标移过来&lt;/div&gt;</code>
+        </p>
+      </div>
+
+      <h3 style="margin: 1.5rem 0 1rem;">📋 评论列表</h3>
+      <div id="commentList">
+        <p style="color: #888;">加载中...</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码分析</h2>
+      <p>有漏洞的数据流：</p>
+      <pre><code>用户输入
+   ↓
+数据库（未过滤存储）
+   ↓
+页面渲染（innerHTML）  ← 漏洞点！
+   ↓
+XSS 执行</code></pre>
+
+      <p style="margin-top: 1rem;">有漏洞的前端代码：</p>
+      <pre><code>// ❌ 使用 innerHTML 直接渲染
+commentDiv.innerHTML = comment.content</code></pre>
+
+      <p style="margin-top: 1rem;">安全的前端代码：</p>
+      <pre><code>// ✅ 使用 textContent
+commentDiv.textContent = comment.content
+
+// 或者后端转义后再渲染
+commentDiv.innerHTML = escapeHtml(comment.content)</code></pre>
+    </section>
+
+    <section>
+      <h2>🛡️ 防御要点</h2>
+      <ul style="margin-left: 1.5rem;">
+        <li><strong>输入过滤</strong> - 存储前过滤危险标签</li>
+        <li><strong>输出转义</strong> - 渲染前进行 HTML 编码</li>
+        <li><strong>避免 innerHTML</strong> - 使用 textContent</li>
+        <li><strong>CSP 策略</strong> - 限制内联脚本执行</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    // 页面加载时获取评论
+    loadComments()
+
+    async function loadComments() {
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const listEl = document.getElementById('commentList')
+      
+      try {
+        const res = await fetch(`/api/comment/list/${mode}`)
+        const data = await res.json()
+        
+        if (data.comments.length === 0) {
+          listEl.innerHTML = '<p style="color: #888;">暂无评论</p>'
+          return
+        }
+        
+        listEl.innerHTML = data.comments.map(c => `
+          <div class="comment-item">
+            <div class="comment-header">
+              <strong>${escapeHtml(c.author)}</strong>
+              <span>${c.time}</span>
+            </div>
+            <div class="comment-content">${mode === 'unsafe' ? c.content : escapeHtml(c.content)}</div>
+          </div>
+        `).join('')
+        
+      } catch (err) {
+        listEl.innerHTML = '<p style="color: #ff6b6b;">加载失败</p>'
+      }
+    }
+
+    async function submitComment() {
+      const author = document.getElementById('authorInput').value
+      const content = document.getElementById('commentInput').value
+      
+      if (!content.trim()) {
+        alert('请输入评论内容')
+        return
+      }
+      
+      try {
+        await fetch('/api/comment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ author, content })
+        })
+        
+        document.getElementById('commentInput').value = ''
+        loadComments()
+      } catch (err) {
+        alert('发表失败')
+      }
+    }
+
+    async function clearComments() {
+      if (!confirm('确定清空所有评论？')) return
+      
+      await fetch('/api/comment/clear', { method: 'DELETE' })
+      loadComments()
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div')
+      div.textContent = str
+      return div.innerHTML
+    }
+  </script>
+</body>
+</html>

