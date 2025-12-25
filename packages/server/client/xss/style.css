@@ -4,18 +4,24 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: #1a1a2e;
   color: #eee;
   line-height: 1.6;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .container {
   max-width: 900px;
   margin: 0 auto;
   padding: 2rem;
+  overflow-x: hidden;
 }
 
 header {
@@ -90,6 +96,7 @@ section {
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   border: 1px solid #0f3460;
+  overflow-x: auto;
 }
 
 section h2 {
@@ -183,7 +190,7 @@ section h2 {
 
 /* 表单元素 */
 input, textarea {
-  width: 100%;
+  max-width: 100%;
   padding: 0.75rem;
   background: #0f3460;
   border: 1px solid #1a1a2e;
@@ -227,8 +234,9 @@ code {
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-family: 'Fira Code', 'Consolas', monospace;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #fcc419;
+  word-break: break-word;
 }
 
 pre {
@@ -237,11 +245,14 @@ pre {
   border-radius: 4px;
   overflow-x: auto;
   margin: 1rem 0;
+  max-width: 100%;
 }
 
 pre code {
   padding: 0;
   background: none;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* 评论列表 */
@@ -326,6 +337,8 @@ pre code {
   width: 100%;
   border-collapse: collapse;
   margin: 1rem 0;
+  display: block;
+  overflow-x: auto;
 }
 
 .info-table th,
@@ -334,6 +347,7 @@ pre code {
   text-align: left;
   border-bottom: 1px solid #0f3460;
   color: #ccc;
+  white-space: nowrap;
 }
 
 .info-table th {
@@ -501,6 +515,12 @@ a:hover {
   gap: 20px;
 }
 
+@media (max-width: 768px) {
+  .compare-box {
+    grid-template-columns: 1fr;
+  }
+}
+
 .unsafe-box {
   border: 2px solid #f44336;
   padding: 15px;
@@ -558,4 +578,89 @@ a:hover {
   height: 100%;
   background: linear-gradient(90deg, #4caf50, #8bc34a);
   transition: width 0.3s;
+}
+
+
+/* 响应式修复 */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  section {
+    padding: 1rem;
+  }
+  
+  .lab-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .network-diagram {
+    flex-direction: column;
+  }
+  
+  .transfer-flow {
+    flex-direction: column;
+  }
+}
+
+/* 通用溢出修复 */
+.info-box,
+.warning-box,
+.success-box,
+.result-box,
+.device-box,
+.upload-box,
+.defense-box,
+.unsafe-box,
+.safe-box {
+  overflow-x: auto;
+  word-wrap: break-word;
+}
+
+/* 统计网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+  margin: 15px 0;
+}
+
+/* 攻击日志 */
+.attack-log {
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 图片和 iframe */
+img, iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 长文本换行 */
+.token-display,
+.packet-box,
+.leak-data {
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+/* 按钮组 */
+.btn {
+  white-space: nowrap;
+  margin: 5px 5px 5px 0;
+}
+
+/* 输入框在 info-box 内 */
+.info-box input,
+.info-box textarea {
+  width: auto;
+  max-width: 100%;
 }
