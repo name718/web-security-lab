@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL注入 Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🟠 SQL注入 Lab</h1>
+      <p class="subtitle">SQL Injection Attack Lab</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ 免责声明</strong>
+      <p>本实验仅供学习目的，请勿将所学知识用于非法用途！</p>
+    </div>
+
+    <section class="intro">
+      <h2>什么是 SQL 注入？</h2>
+      <p>SQL注入是一种代码注入攻击，攻击者通过在输入中插入恶意 SQL 代码，操纵数据库查询，从而：</p>
+      <div class="types">
+        <div class="type-card">
+          <h3>绕过认证</h3>
+          <p>无需密码直接登录管理员账户</p>
+        </div>
+        <div class="type-card">
+          <h3>数据泄露</h3>
+          <p>窃取数据库中的敏感信息</p>
+        </div>
+        <div class="type-card">
+          <h3>数据篡改</h3>
+          <p>修改、删除数据库记录</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="labs">
+      <h2>📚 实验列表</h2>
+      
+      <a href="login.html" class="lab-card">
+        <div class="lab-icon">🔐</div>
+        <div class="lab-info">
+          <h3>实验一：登录绕过</h3>
+          <p>通过 SQL 注入绕过登录验证，直接获取管理员权限</p>
+          <span class="difficulty easy">入门</span>
+        </div>
+      </a>
+
+      <a href="union.html" class="lab-card">
+        <div class="lab-icon">📊</div>
+        <div class="lab-info">
+          <h3>实验二：UNION 注入</h3>
+          <p>利用 UNION 查询窃取其他表的敏感数据</p>
+          <span class="difficulty medium">进阶</span>
+        </div>
+      </a>
+
+      <a href="search.html" class="lab-card">
+        <div class="lab-icon">🔍</div>
+        <div class="lab-info">
+          <h3>实验三：搜索注入</h3>
+          <p>在搜索功能中利用 LIKE 语句进行注入</p>
+          <span class="difficulty medium">进阶</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>📋 数据库结构</h2>
+      <p>本实验使用 SQLite 内存数据库，包含以下表：</p>
+      
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">users 表</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr><th>id</th><th>username</th><th>password</th><th>role</th><th>balance</th></tr>
+        </thead>
+        <tbody id="usersTable"></tbody>
+      </table>
+
+      <h3 style="margin: 1.5rem 0 0.5rem; color: #4dabf7;">secrets 表 (目标)</h3>
+      <pre><code>| id | content                      | level      |
+|----|------------------------------|------------|
+| 1  | FLAG{sql_injection_master}   | top_secret |
+| 2  | 数据库root密码: r00t@2024     | secret     |
+| 3  | AWS密钥: AKIA...              | secret     |</code></pre>
+    </section>
+
+    <section class="defense">
+      <h2>🛡️ 防御方案</h2>
+      <ul>
+        <li><strong>参数化查询</strong> - 使用 Prepared Statements</li>
+        <li><strong>ORM 框架</strong> - 如 Sequelize、TypeORM</li>
+        <li><strong>输入验证</strong> - 白名单过滤</li>
+        <li><strong>最小权限</strong> - 数据库账户只给必要权限</li>
+        <li><strong>错误处理</strong> - 不暴露数据库细节</li>
+      </ul>
+    </section>
+
+    <p style="margin-top: 2rem; text-align: center;">
+      <a href="/xss/index.html" style="color: #e94560;">← 返回 XSS Lab</a>
+    </p>
+  </div>
+
+  <script>
+    // 加载用户表数据
+    fetch('/api/sql/users')
+      .then(r => r.json())
+      .then(users => {
+        document.getElementById('usersTable').innerHTML = users.map(u => `
+          <tr>
+            <td>${u.id}</td>
+            <td>${u.username}</td>
+            <td>******</td>
+            <td>${u.role}</td>
+            <td>${u.balance}</td>
+          </tr>
+        `).join('')
+      })
+  </script>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

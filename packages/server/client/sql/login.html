@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验一：登录绕过</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 SQL注入 Lab</a>
+    </nav>
+
+    <header>
+      <h1>🔐 实验一：登录绕过</h1>
+      <p class="subtitle">Authentication Bypass</p>
+    </header>
+
+    <section>
+      <h2>📖 原理说明</h2>
+      <p>当登录验证使用字符串拼接构造 SQL 时，攻击者可以通过注入特殊字符改变 SQL 语义：</p>
+      <pre><code>-- 原始 SQL
+SELECT * FROM users WHERE username='输入' AND password='输入'
+
+-- 注入后
+SELECT * FROM users WHERE username='admin'--' AND password='任意'
+                                       ↑
+                              注释掉了密码验证！</code></pre>
+    </section>
+
+    <section>
+      <h2>🧪 漏洞演示</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked> 
+          ❌ 有漏洞版本 (字符串拼接)
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe"> 
+          ✅ 安全版本 (参数化查询)
+        </label>
+      </div>
+
+      <div style="max-width: 400px; margin: 1rem 0;">
+        <div style="margin-bottom: 1rem;">
+          <label>用户名:</label>
+          <input type="text" id="username" placeholder="输入用户名">
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label>密码:</label>
+          <input type="password" id="password" placeholder="输入密码">
+        </div>
+        <button class="btn" onclick="login()">登录</button>
+      </div>
+
+      <div class="warning-box">
+        <strong>💡 尝试以下 Payload：</strong>
+        <p style="margin-top: 0.5rem;">
+          用户名: <code>admin'--</code> 密码: 任意
+        </p>
+        <p style="margin-top: 0.5rem;">
+          用户名: <code>' OR '1'='1</code> 密码: <code>' OR '1'='1</code>
+        </p>
+        <p style="margin-top: 0.5rem;">
+          用户名: <code>' OR 1=1--</code> 密码: 任意
+        </p>
+      </div>
+
+      <div id="result" style="margin-top: 1rem;"></div>
+
+      <div style="margin-top: 1.5rem;">
+        <h3>执行的 SQL:</h3>
+        <pre><code id="sqlDisplay">等待输入...</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码分析</h2>
+      <p>有漏洞的后端代码：</p>
+      <pre><code>// ❌ 字符串拼接，存在注入漏洞
+const sql = `SELECT * FROM users 
+  WHERE username='${username}' 
+  AND password='${password}'`
+
+db.prepare(sql).get()</code></pre>
+
+      <p style="margin-top: 1rem;">安全的后端代码：</p>
+      <pre><code>// ✅ 参数化查询，注入无效
+const sql = 'SELECT * FROM users WHERE username=? AND password=?'
+
+db.prepare(sql).get(username, password)</code></pre>
+    </section>
+
+    <section>
+      <h2>🎯 攻击原理详解</h2>
+      
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">Payload: admin'--</h3>
+      <pre><code>SELECT * FROM users WHERE username='admin'--' AND password='xxx'
+                                          ↑
+                                   -- 是SQL注释
+                                   后面的内容被忽略</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">Payload: ' OR '1'='1</h3>
+      <pre><code>SELECT * FROM users WHERE username='' OR '1'='1' AND password='' OR '1'='1'
+                                        ↑              ↑
+                                   永远为真        永远为真
+                                   返回所有用户！</code></pre>
+    </section>
+
+    <section>
+      <h2>🛡️ 防御要点</h2>
+      <ul style="margin-left: 1.5rem;">
+        <li><strong>参数化查询</strong> - 用户输入作为参数，不参与 SQL 解析</li>
+        <li><strong>ORM 框架</strong> - 自动处理参数化</li>
+        <li><strong>输入验证</strong> - 限制用户名格式（如只允许字母数字）</li>
+        <li><strong>错误信息</strong> - 不要暴露 SQL 错误详情</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    async function login() {
+      const username = document.getElementById('username').value
+      const password = document.getElementById('password').value
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      
+      const res = await fetch(`/api/sql/login/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      
+      const data = await res.json()
+      
+      // 显示 SQL
+      if (data.sql) {
+        document.getElementById('sqlDisplay').textContent = data.sql
+      } else {
+        document.getElementById('sqlDisplay').textContent = 
+          `SELECT * FROM users WHERE username=? AND password=?\n参数: ['${username}', '${password}']`
+      }
+      
+      // 显示结果
+      const resultEl = document.getElementById('result')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="success-box">
+            <strong>✅ 登录成功！</strong>
+            <p>用户: ${data.user.username}</p>
+            <p>角色: ${data.user.role}</p>
+            <p>余额: ¥${data.user.balance}</p>
+          </div>
+        `
+      } else {
+        resultEl.innerHTML = `
+          <div class="warning-box">
+            <strong>❌ ${data.message}</strong>
+          </div>
+        `
+      }
+    }
+
+    // 实时更新 SQL 预览
+    function updateSqlPreview() {
+      const username = document.getElementById('username').value
+      const password = document.getElementById('password').value
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      
+      if (mode === 'unsafe') {
+        document.getElementById('sqlDisplay').textContent = 
+          `SELECT * FROM users WHERE username='${username}' AND password='${password}'`
+      } else {
+        document.getElementById('sqlDisplay').textContent = 
+          `SELECT * FROM users WHERE username=? AND password=?\n参数: ['${username}', '${password}']`
+      }
+    }
+
+    document.getElementById('username').addEventListener('input', updateSqlPreview)
+    document.getElementById('password').addEventListener('input', updateSqlPreview)
+    document.querySelectorAll('input[name="mode"]').forEach(el => {
+      el.addEventListener('change', updateSqlPreview)
+    })
+  </script>
+</body>
+</html>

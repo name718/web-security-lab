@@ -6,6 +6,7 @@ import { dirname, join } from 'path'
 import searchRouter from './routes/search.js'
 import commentRouter from './routes/comment.js'
 import stealRouter from './routes/steal.js'
+import sqlRouter from './routes/sql.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -16,13 +17,15 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// 静态文件 - XSS Lab 页面
+// 静态文件
 app.use('/xss', express.static(join(__dirname, '../client/xss')))
+app.use('/sql', express.static(join(__dirname, '../client/sql')))
 
 // API 路由
 app.use('/api/search', searchRouter)
 app.use('/api/comment', commentRouter)
 app.use('/api/steal', stealRouter)
+app.use('/api/sql', sqlRouter)
 
 // 首页重定向
 app.get('/', (req, res) => {
@@ -37,23 +40,20 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`
 🔐 ========================================
-   XSS Lab Server 启动成功
+   Security Lab Server 启动成功
    http://localhost:${PORT}
 ========================================
 
-📚 实验页面:
-   /xss/index.html     - 实验首页
+📚 XSS Lab:
+   /xss/index.html     - XSS 实验首页
    /xss/search.html    - 反射型 XSS
    /xss/comment.html   - 存储型 XSS
-   /xss/steal.html     - Token 窃取演示
+   /xss/steal.html     - Token 窃取
 
-🔌 API 接口:
-   GET  /api/search/unsafe?q=xxx  - 有漏洞的搜索
-   GET  /api/search/safe?q=xxx    - 安全的搜索
-   POST /api/comment              - 发表评论
-   GET  /api/comment/list/unsafe  - 获取评论(不转义)
-   GET  /api/comment/list/safe    - 获取评论(转义)
-   GET  /api/steal?token=xxx      - 模拟攻击者服务器
-   GET  /api/steal/list           - 查看窃取的 token
+📚 SQL注入 Lab:
+   /sql/index.html     - SQL注入实验首页
+   /sql/login.html     - 登录绕过
+   /sql/union.html     - UNION注入
+   /sql/search.html    - 搜索注入
   `)
 })

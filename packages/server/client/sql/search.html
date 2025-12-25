@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验三：搜索注入</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 SQL注入 Lab</a>
+    </nav>
+
+    <header>
+      <h1>🔍 实验三：搜索注入</h1>
+      <p class="subtitle">LIKE-based SQL Injection</p>
+    </header>
+
+    <section>
+      <h2>📖 原理说明</h2>
+      <p>搜索功能通常使用 LIKE 语句，同样存在注入风险：</p>
+      <pre><code>-- 原始查询
+SELECT * FROM users WHERE username LIKE '%关键词%'
+
+-- 注入后
+SELECT * FROM users WHERE username LIKE '%' OR 1=1--%'
+                                          ↑
+                                    返回所有用户！</code></pre>
+    </section>
+
+    <section>
+      <h2>🧪 漏洞演示 - 用户搜索</h2>
+      
+      <div style="margin: 1rem 0;">
+        <label>搜索用户:</label>
+        <input type="text" id="keyword" placeholder="输入关键词">
+        <button class="btn" onclick="searchUser()" style="margin-top: 0.5rem;">搜索</button>
+      </div>
+
+      <div class="warning-box">
+        <strong>💡 尝试以下 Payload：</strong>
+        
+        <p style="margin-top: 0.5rem;"><strong>返回所有用户:</strong></p>
+        <p><code>' OR '1'='1</code></p>
+        <p><code>' OR 1=1--</code></p>
+        
+        <p style="margin-top: 0.5rem;"><strong>UNION 注入窃取密码:</strong></p>
+        <p><code>' UNION SELECT id,password,role FROM users--</code></p>
+        
+        <p style="margin-top: 0.5rem;"><strong>窃取 secrets 表:</strong></p>
+        <p><code>' UNION SELECT id,content,level FROM secrets--</code></p>
+      </div>
+
+      <div style="margin-top: 1.5rem;">
+        <h3>执行的 SQL:</h3>
+        <pre><code id="sqlDisplay">等待输入...</code></pre>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <h3>搜索结果:</h3>
+        <div id="result">
+          <p style="color: #888;">等待搜索...</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>🎯 攻击详解</h2>
+      
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">Payload: ' OR '1'='1</h3>
+      <pre><code>SELECT * FROM users WHERE username LIKE '%' OR '1'='1%'
+                                            ↑
+                                      永远为真
+                                      返回所有记录</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">Payload: ' UNION SELECT...</h3>
+      <pre><code>SELECT id, username, role FROM users WHERE username LIKE '%'
+UNION SELECT id, password, role FROM users--%'
+             ↑
+      窃取密码字段！</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">通配符攻击</h3>
+      <pre><code>-- % 匹配任意字符
+搜索: %
+结果: 返回所有用户
+
+-- _ 匹配单个字符
+搜索: ____  (4个下划线)
+结果: 返回用户名为4个字符的用户 (如 test, lisi)</code></pre>
+    </section>
+
+    <section>
+      <h2>🔬 真实案例</h2>
+      <div class="info-box">
+        <p>搜索注入在实际应用中非常常见：</p>
+        <ul style="margin: 0.5rem 0 0 1.5rem;">
+          <li>电商网站商品搜索</li>
+          <li>用户管理后台</li>
+          <li>日志查询系统</li>
+          <li>内容管理系统</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>🛡️ 防御要点</h2>
+      <ul style="margin-left: 1.5rem;">
+        <li><strong>参数化查询</strong> - <code>WHERE username LIKE ?</code>，参数为 <code>%keyword%</code></li>
+        <li><strong>转义特殊字符</strong> - 转义 <code>%</code> 和 <code>_</code></li>
+        <li><strong>限制搜索长度</strong> - 防止超长 payload</li>
+        <li><strong>全文搜索</strong> - 使用专门的搜索引擎如 Elasticsearch</li>
+      </ul>
+      
+      <p style="margin-top: 1rem;">安全的实现：</p>
+      <pre><code>// ✅ 参数化 + 转义通配符
+const safeKeyword = keyword.replace(/%/g, '\\%').replace(/_/g, '\\_')
+const sql = 'SELECT * FROM users WHERE username LIKE ?'
+db.prepare(sql).all(`%${safeKeyword}%`)</code></pre>
+    </section>
+  </div>
+
+  <script>
+    async function searchUser() {
+      const keyword = document.getElementById('keyword').value
+      
+      const res = await fetch(`/api/sql/search/unsafe?keyword=${encodeURIComponent(keyword)}`)
+      const data = await res.json()
+      
+      // 显示 SQL
+      document.getElementById('sqlDisplay').textContent = data.sql || ''
+      
+      // 显示结果
+      const resultEl = document.getElementById('result')
+      if (data.success && data.users.length > 0) {
+        resultEl.innerHTML = `
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr><th>ID</th><th>用户名/内容</th><th>角色/级别</th></tr>
+            </thead>
+            <tbody>
+              ${data.users.map(u => `
+                <tr>
+                  <td>${u.id}</td>
+                  <td>${u.username}</td>
+                  <td>${u.role}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p style="color: #888; margin-top: 0.5rem;">共 ${data.users.length} 条结果</p>
+        `
+      } else if (data.success) {
+        resultEl.innerHTML = '<p style="color: #888;">无结果</p>'
+      } else {
+        resultEl.innerHTML = `<div class="warning-box">${data.message}</div>`
+      }
+    }
+
+    // 实时更新 SQL 预览
+    document.getElementById('keyword').addEventListener('input', function(e) {
+      document.getElementById('sqlDisplay').textContent = 
+        `SELECT id, username, role FROM users WHERE username LIKE '%${e.target.value}%'`
+    })
+  </script>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>
