@@ -42,7 +42,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/web-security-lab.git
+git clone https://github.com/name718/web-security-lab.git
 cd web-security-lab
 
 # 安装依赖
