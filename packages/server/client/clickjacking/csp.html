@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSP frame-ancestors 防护 - Clickjacking Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .demo-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    @media (max-width: 768px) { .demo-container { grid-template-columns: 1fr; } }
+    .demo-box { border: 2px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .demo-box.unsafe { border-color: #f44336; }
+    .demo-box.safe { border-color: #2196f3; }
+    .demo-header { padding: 10px 15px; font-weight: bold; }
+    .demo-box.unsafe .demo-header { background: #ffebee; color: #c62828; }
+    .demo-box.safe .demo-header { background: #e3f2fd; color: #1565c0; }
+    .demo-content { height: 300px; background: #f5f5f5; }
+    .demo-content iframe { width: 100%; height: 100%; border: none; }
+    .header-display { background: #263238; color: #aed581; padding: 15px; border-radius: 8px; font-family: monospace; margin: 15px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回 Clickjacking Lab</a>
+    <h1>🔒 实验三：CSP frame-ancestors 防护</h1>
+    <div class="info-box">
+      <strong>CSP frame-ancestors</strong> 是 Content-Security-Policy 的一个指令，比 X-Frame-Options 更灵活
+    </div>
+
+    <section>
+      <h2>📖 frame-ancestors 语法</h2>
+      <table class="info-table">
+        <tr><th>值</th><th>说明</th><th>示例</th></tr>
+        <tr><td><code>'none'</code></td><td>禁止任何页面嵌入</td><td>等同于 X-Frame-Options: DENY</td></tr>
+        <tr><td><code>'self'</code></td><td>只允许同源嵌入</td><td>等同于 X-Frame-Options: SAMEORIGIN</td></tr>
+        <tr><td><code>域名</code></td><td>允许指定域名嵌入</td><td><code>https://trusted.com</code></td></tr>
+        <tr><td><code>多个值</code></td><td>允许多个来源</td><td><code>'self' https://a.com https://b.com</code></td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>🎮 对比演示</h2>
+      <div class="demo-container">
+        <div class="demo-box unsafe">
+          <div class="demo-header">❌ 无防护</div>
+          <div class="demo-content">
+            <iframe src="/api/clickjacking/unsafe/transfer-page"></iframe>
+          </div>
+        </div>
+        <div class="demo-box safe">
+          <div class="demo-header">✅ CSP: frame-ancestors 'none'</div>
+          <div class="demo-content">
+            <iframe src="/api/clickjacking/safe/csp/transfer-page"></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="info-box">
+        <p>👆 右侧页面被 CSP 策略阻止嵌入，查看 Console 可见错误</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>💻 服务端实现</h2>
+      <pre><code>// Express.js
+app.get('/transfer', (req, res) => {
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'none'")
+  res.send(html)
+})
+
+// 允许特定域名
+res.setHeader('Content-Security-Policy', "frame-ancestors 'self' https://trusted.com")
+
+// Nginx
+add_header Content-Security-Policy "frame-ancestors 'none'" always;
+
+// Apache
+Header always set Content-Security-Policy "frame-ancestors 'none'"</code></pre>
+    </section>
+
+    <section>
+      <h2>🔍 响应头</h2>
+      <div class="header-display">
+        HTTP/1.1 200 OK<br>
+        Content-Type: text/html<br>
+        <span style="color: #64b5f6;">Content-Security-Policy: frame-ancestors 'none'</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>⚡ CSP vs X-Frame-Options</h2>
+      <table class="info-table">
+        <tr><th>特性</th><th>X-Frame-Options</th><th>CSP frame-ancestors</th></tr>
+        <tr><td>多域名支持</td><td>❌</td><td>✅</td></tr>
+        <tr><td>通配符</td><td>❌</td><td>✅ <code>*.example.com</code></td></tr>
+        <tr><td>浏览器支持</td><td>所有浏览器</td><td>现代浏览器</td></tr>
+        <tr><td>推荐程度</td><td>作为后备</td><td>✅ 首选</td></tr>
+      </table>
+      <div class="info-box" style="margin-top: 15px;">
+        <strong>最佳实践：</strong>同时设置两个头，确保兼容性
+        <pre style="margin-top: 10px;"><code>X-Frame-Options: DENY
+Content-Security-Policy: frame-ancestors 'none'</code></pre>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

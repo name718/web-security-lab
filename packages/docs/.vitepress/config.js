@@ -46,7 +46,8 @@ export default {
         {
           text: '可用性攻击',
           items: [
-            { text: 'DDoS 拒绝服务', link: '/labs/ddos' }
+            { text: 'DDoS 拒绝服务', link: '/labs/ddos' },
+            { text: 'Clickjacking 点击劫持', link: '/labs/clickjacking' }
           ]
         }
       ]

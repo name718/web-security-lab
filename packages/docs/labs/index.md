@@ -62,3 +62,10 @@ JSON Web Token 的常见安全问题。
 
 - HTTP Flood
 - 限流防护
+
+### [Clickjacking 点击劫持](/labs/clickjacking)
+通过透明 iframe 覆盖诱骗用户点击。
+
+- iframe 覆盖攻击
+- X-Frame-Options 防护
+- CSP frame-ancestors 防护

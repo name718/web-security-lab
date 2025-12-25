@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>X-Frame-Options 防护 - Clickjacking Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .demo-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    @media (max-width: 768px) {
+      .demo-container { grid-template-columns: 1fr; }
+    }
+    
+    .demo-box {
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .demo-box.unsafe { border-color: #f44336; }
+    .demo-box.safe { border-color: #4caf50; }
+    
+    .demo-header {
+      padding: 10px 15px;
+      font-weight: bold;
+    }
+    
+    .demo-box.unsafe .demo-header { background: #ffebee; color: #c62828; }
+    .demo-box.safe .demo-header { background: #e8f5e9; color: #2e7d32; }
+    
+    .demo-content {
+      height: 300px;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .demo-content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    
+    .blocked-message {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+    
+    .blocked-message .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    
+    .header-display {
+      background: #263238;
+      color: #aed581;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回 Clickjacking Lab</a>
+    
+    <h1>🛡️ 实验二：X-Frame-Options 防护</h1>
+
+    <div class="info-box">
+      <strong>X-Frame-Options</strong> 是一个 HTTP 响应头，用于控制页面是否可以被 iframe 嵌入
+    </div>
+
+    <section>
+      <h2>📖 X-Frame-Options 选项</h2>
+      <table class="info-table">
+        <tr>
+          <th>值</th>
+          <th>说明</th>
+          <th>使用场景</th>
+        </tr>
+        <tr>
+          <td><code>DENY</code></td>
+          <td>完全禁止被嵌入</td>
+          <td>敏感页面（登录、支付）</td>
+        </tr>
+        <tr>
+          <td><code>SAMEORIGIN</code></td>
+          <td>只允许同源页面嵌入</td>
+          <td>内部系统页面</td>
+        </tr>
+        <tr>
+          <td><code>ALLOW-FROM uri</code></td>
+          <td>允许指定来源嵌入</td>
+          <td>⚠️ 已废弃，不推荐</td>
+        </tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>🎮 对比演示</h2>
+      
+      <div class="demo-container">
+        <div class="demo-box unsafe">
+          <div class="demo-header">❌ 无防护</div>
+          <div class="demo-content">
+            <iframe src="/api/clickjacking/unsafe/transfer-page"></iframe>
+          </div>
+        </div>
+        
+        <div class="demo-box safe">
+          <div class="demo-header">✅ X-Frame-Options: DENY</div>
+          <div class="demo-content" id="xframe-demo">
+            <iframe src="/api/clickjacking/safe/xframe/transfer-page" id="protected-iframe"></iframe>
+          </div>
+        </div>
+      </div>
+      
+      <div class="info-box">
+        <p>👆 左侧页面可以被嵌入，右侧页面被浏览器阻止</p>
+        <p>打开开发者工具 Console 可以看到错误信息</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>💻 服务端实现</h2>
+      
+      <h3>Express.js</h3>
+      <pre><code>// 单个路由
+app.get('/transfer', (req, res) => {
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.send(html)
+})
+
+// 全局中间件
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY')
+  next()
+})
+
+// 使用 helmet 库
+const helmet = require('helmet')
+app.use(helmet.frameguard({ action: 'deny' }))</code></pre>
+
+      <h3>Nginx</h3>
+      <pre><code>add_header X-Frame-Options "DENY" always;</code></pre>
+
+      <h3>Apache</h3>
+      <pre><code>Header always set X-Frame-Options "DENY"</code></pre>
+    </section>
+
+    <section>
+      <h2>🔍 响应头对比</h2>
+      
+      <p><strong>无防护页面:</strong></p>
+      <div class="header-display">
+        HTTP/1.1 200 OK<br>
+        Content-Type: text/html<br>
+        <span style="color: #ef5350;">// 没有 X-Frame-Options</span>
+      </div>
+      
+      <p><strong>有防护页面:</strong></p>
+      <div class="header-display">
+        HTTP/1.1 200 OK<br>
+        Content-Type: text/html<br>
+        <span style="color: #66bb6a;">X-Frame-Options: DENY</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>⚠️ 注意事项</h2>
+      <div class="warning-box">
+        <ul>
+          <li><code>ALLOW-FROM</code> 已被废弃，现代浏览器不支持</li>
+          <li>推荐同时使用 CSP <code>frame-ancestors</code> 作为补充</li>
+          <li>X-Frame-Options 只能设置一个值，不能组合</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // 检测 iframe 是否被阻止
+    const iframe = document.getElementById('protected-iframe')
+    iframe.onerror = function() {
+      document.getElementById('xframe-demo').innerHTML = `
+        <div class="blocked-message">
+          <div class="icon">🚫</div>
+          <p>iframe 加载被阻止</p>
+          <p>X-Frame-Options: DENY 生效</p>
+        </div>
+      `
+    }
+  </script>
+</body>
+</html>

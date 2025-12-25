@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clickjacking 点击劫持 - Security Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← 返回首页</a>
+    
+    <h1>🖱️ Clickjacking 点击劫持</h1>
+    
+    <div class="warning-box">
+      <strong>⚠️ 学习目的</strong>
+      <p>点击劫持通过透明 iframe 覆盖，诱骗用户点击隐藏的恶意按钮</p>
+    </div>
+
+    <section>
+      <h2>📖 攻击原理</h2>
+      <div class="info-box">
+        <pre>
+攻击者页面
+┌─────────────────────────────┐
+│  "点击领取红包"  ← 诱饵按钮   │
+│  ┌─────────────────────┐    │
+│  │ 透明 iframe         │    │
+│  │ ┌─────────────────┐ │    │
+│  │ │ [确认转账] ← 真实 │ │    │
+│  │ └─────────────────┘ │    │
+│  └─────────────────────┘    │
+└─────────────────────────────┘
+        </pre>
+        <p>用户以为点击的是"领取红包"，实际点击的是银行"确认转账"按钮</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 实验列表</h2>
+      
+      <a href="attack.html" class="lab-card">
+        <div class="lab-icon">🎯</div>
+        <div class="lab-info">
+          <h3>实验一：iframe 覆盖攻击</h3>
+          <p>演示如何通过透明 iframe 劫持用户点击</p>
+          <span class="difficulty hard">攻击演示</span>
+        </div>
+      </a>
+
+      <a href="xframe.html" class="lab-card">
+        <div class="lab-icon">🛡️</div>
+        <div class="lab-info">
+          <h3>实验二：X-Frame-Options 防护</h3>
+          <p>使用 X-Frame-Options 响应头阻止 iframe 嵌入</p>
+          <span class="difficulty medium">防护方案</span>
+        </div>
+      </a>
+
+      <a href="csp.html" class="lab-card">
+        <div class="lab-icon">🔒</div>
+        <div class="lab-info">
+          <h3>实验三：CSP frame-ancestors 防护</h3>
+          <p>使用 CSP 策略控制页面嵌入权限</p>
+          <span class="difficulty medium">防护方案</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>📊 账户状态</h2>
+      <div id="account-status" class="info-box">
+        <p>余额: <strong id="balance">加载中...</strong></p>
+        <p>操作记录: <span id="actions">0</span> 次</p>
+        <button onclick="resetAccount()" class="btn" style="margin-top: 10px;">重置账户</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>🔧 防御方案对比</h2>
+      <table class="info-table">
+        <tr>
+          <th>方案</th>
+          <th>响应头</th>
+          <th>兼容性</th>
+          <th>灵活性</th>
+        </tr>
+        <tr>
+          <td>X-Frame-Options</td>
+          <td><code>X-Frame-Options: DENY</code></td>
+          <td>✅ 所有浏览器</td>
+          <td>⚠️ 只能 DENY/SAMEORIGIN</td>
+        </tr>
+        <tr>
+          <td>CSP frame-ancestors</td>
+          <td><code>frame-ancestors 'none'</code></td>
+          <td>✅ 现代浏览器</td>
+          <td>✅ 可指定允许的域名</td>
+        </tr>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    async function loadAccount() {
+      const res = await fetch('/api/clickjacking/account')
+      const data = await res.json()
+      document.getElementById('balance').textContent = `¥${data.balance}`
+      document.getElementById('actions').textContent = data.actions.length
+    }
+
+    async function resetAccount() {
+      await fetch('/api/clickjacking/reset', { method: 'POST' })
+      loadAccount()
+      alert('账户已重置')
+    }
+
+    loadAccount()
+  </script>
+</body>
+</html>

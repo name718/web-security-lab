@@ -13,6 +13,7 @@ import jwtRouter from './routes/jwt.js'
 import phishingRouter from './routes/phishing.js'
 import idorRouter from './routes/idor.js'
 import rbacRouter from './routes/rbac.js'
+import clickjackingRouter from './routes/clickjacking.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -32,6 +33,7 @@ app.use('/jwt', express.static(join(__dirname, '../client/jwt')))
 app.use('/phishing', express.static(join(__dirname, '../client/phishing')))
 app.use('/idor', express.static(join(__dirname, '../client/idor')))
 app.use('/rbac', express.static(join(__dirname, '../client/rbac')))
+app.use('/clickjacking', express.static(join(__dirname, '../client/clickjacking')))
 app.use('/', express.static(join(__dirname, '../client')))
 
 // API 路由
@@ -45,6 +47,7 @@ app.use('/api/jwt', jwtRouter)
 app.use('/api/phishing', phishingRouter)
 app.use('/api/idor', idorRouter)
 app.use('/api/rbac', rbacRouter)
+app.use('/api/clickjacking', clickjackingRouter)
 
 // 首页
 app.get('/', (req, res) => {
