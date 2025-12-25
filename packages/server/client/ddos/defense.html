@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验二：限流防护</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .stat-card {
+      background: #0f3460;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #4dabf7;
+    }
+    .stat-card .label {
+      color: #888;
+      font-size: 0.85rem;
+    }
+    .stat-card.danger .value { color: #ff6b6b; }
+    .stat-card.success .value { color: #51cf66; }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 30px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #0f3460;
+      transition: .3s;
+      border-radius: 30px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #51cf66; }
+    input:checked + .slider:before { transform: translateX(30px); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 DDoS Lab</a>
+    </nav>
+
+    <header>
+      <h1>🛡️ Rate Limiting 限流防护</h1>
+      <p class="subtitle">学习如何防御 DDoS 攻击</p>
+    </header>
+
+    <section>
+      <h2>📊 服务器状态</h2>
+      <div class="dashboard">
+        <div class="stat-card">
+          <div class="value" id="totalRequests">0</div>
+          <div class="label">总请求数</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" id="rps">0</div>
+          <div class="label">请求/秒</div>
+        </div>
+        <div class="stat-card" id="blockedCard">
+          <div class="value" id="blockedIPs">0</div>
+          <div class="label">被封禁 IP</div>
+        </div>
+        <div class="stat-card" id="statusCard">
+          <div class="value" id="serverStatus">正常</div>
+          <div class="label">服务器状态</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>⚙️ 限流配置</h2>
+      
+      <div class="controls">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span>限流开关:</span>
+          <label class="switch">
+            <input type="checkbox" id="rateLimitSwitch" onchange="toggleRateLimit()">
+            <span class="slider"></span>
+          </label>
+          <span id="rateLimitStatus" style="color: #ff6b6b;">关闭</span>
+        </div>
+        
+        <div>
+          <label>最大 RPS:</label>
+          <input type="number" id="maxRps" value="10" min="1" max="100" style="width: 80px;">
+          <button class="btn btn-secondary" onclick="updateConfig()">应用</button>
+        </div>
+      </div>
+
+      <div class="info-box" style="margin-top: 1rem;">
+        <p><strong>限流规则:</strong></p>
+        <p>• 每个 IP 每秒最多 <span id="displayMaxRps">10</span> 次请求</p>
+        <p>• 超限后封禁 5 秒</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 对比测试</h2>
+      
+      <div class="controls">
+        <button class="btn" onclick="testNormal()">📤 正常请求</button>
+        <button class="btn" onclick="testFlood()">🚀 模拟攻击 (50并发)</button>
+        <button class="btn btn-secondary" onclick="resetServer()">🔄 重置</button>
+      </div>
+
+      <div id="testResult" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>📖 限流原理</h2>
+      
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">令牌桶算法</h3>
+      <pre><code>// 简化的限流逻辑
+const ipRequests = new Map()
+
+function rateLimit(ip) {
+  const now = Date.now()
+  const record = ipRequests.get(ip) || { count: 0, windowStart: now }
+  
+  // 重置时间窗口
+  if (now - record.windowStart > 1000) {
+    record.count = 0
+    record.windowStart = now
+  }
+  
+  record.count++
+  
+  if (record.count > MAX_RPS) {
+    return false  // 拒绝请求
+  }
+  
+  return true  // 允许请求
+}</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">滑动窗口算法</h3>
+      <p>更精确的限流方式，避免窗口边界的突发流量问题。</p>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">分布式限流</h3>
+      <p>使用 Redis 等中间件实现跨服务器的统一限流。</p>
+    </section>
+
+    <section>
+      <h2>🛡️ 其他防护手段</h2>
+      
+      <div class="types">
+        <div class="type-card">
+          <h3>CDN</h3>
+          <p>Cloudflare、阿里云 CDN 等，分散流量</p>
+        </div>
+        <div class="type-card">
+          <h3>WAF</h3>
+          <p>Web 应用防火墙，识别恶意请求</p>
+        </div>
+        <div class="type-card">
+          <h3>验证码</h3>
+          <p>区分人机，阻止自动化攻击</p>
+        </div>
+      </div>
+
+      <pre style="margin-top: 1rem;"><code>// Nginx 限流配置
+http {
+  limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+  
+  server {
+    location /api/ {
+      limit_req zone=api burst=20 nodelay;
+    }
+  }
+}</code></pre>
+    </section>
+  </div>
+
+  <script>
+    // 定时刷新状态
+    setInterval(updateStatus, 500)
+    loadConfig()
+
+    async function updateStatus() {
+      try {
+        const res = await fetch('/api/ddos/status')
+        const data = await res.json()
+        
+        document.getElementById('totalRequests').textContent = data.totalRequests
+        document.getElementById('rps').textContent = data.requestsPerSecond
+        document.getElementById('blockedIPs').textContent = data.blockedIPs
+        
+        const statusEl = document.getElementById('serverStatus')
+        const statusCard = document.getElementById('statusCard')
+        const blockedCard = document.getElementById('blockedCard')
+        
+        if (data.isOverloaded) {
+          statusEl.textContent = '过载!'
+          statusCard.className = 'stat-card danger'
+        } else {
+          statusEl.textContent = '正常'
+          statusCard.className = 'stat-card success'
+        }
+        
+        blockedCard.className = data.blockedIPs > 0 ? 'stat-card danger' : 'stat-card'
+        
+        // 更新限流状态显示
+        document.getElementById('rateLimitSwitch').checked = data.rateLimitEnabled
+        document.getElementById('rateLimitStatus').textContent = data.rateLimitEnabled ? '开启' : '关闭'
+        document.getElementById('rateLimitStatus').style.color = data.rateLimitEnabled ? '#51cf66' : '#ff6b6b'
+      } catch (e) {}
+    }
+
+    async function loadConfig() {
+      const res = await fetch('/api/ddos/status')
+      const data = await res.json()
+      document.getElementById('rateLimitSwitch').checked = data.rateLimitEnabled
+    }
+
+    async function toggleRateLimit() {
+      const enabled = document.getElementById('rateLimitSwitch').checked
+      await fetch('/api/ddos/ratelimit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      })
+    }
+
+    async function updateConfig() {
+      const maxRps = parseInt(document.getElementById('maxRps').value)
+      await fetch('/api/ddos/ratelimit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxRps })
+      })
+      document.getElementById('displayMaxRps').textContent = maxRps
+    }
+
+    async function testNormal() {
+      const resultEl = document.getElementById('testResult')
+      resultEl.innerHTML = '<div class="info-box">发送请求中...</div>'
+      
+      try {
+        const start = Date.now()
+        const res = await fetch('/api/ddos/api')
+        const data = await res.json()
+        const time = Date.now() - start
+        
+        if (res.ok) {
+          resultEl.innerHTML = `<div class="success-box">✅ 请求成功 (${time}ms)</div>`
+        } else {
+          resultEl.innerHTML = `<div class="warning-box">❌ ${data.error || '请求失败'}</div>`
+        }
+      } catch (e) {
+        resultEl.innerHTML = `<div class="warning-box">❌ 请求失败: ${e.message}</div>`
+      }
+    }
+
+    async function testFlood() {
+      const resultEl = document.getElementById('testResult')
+      resultEl.innerHTML = '<div class="info-box">🚀 发起 50 并发请求...</div>'
+      
+      const promises = []
+      let success = 0, blocked = 0, error = 0
+      
+      for (let i = 0; i < 50; i++) {
+        promises.push(
+          fetch('/api/ddos/api')
+            .then(r => {
+              if (r.ok) success++
+              else if (r.status === 429) blocked++
+              else error++
+            })
+            .catch(() => error++)
+        )
+      }
+      
+      await Promise.all(promises)
+      
+      const rateLimitEnabled = document.getElementById('rateLimitSwitch').checked
+      
+      resultEl.innerHTML = `
+        <div class="${blocked > 0 ? 'success-box' : 'warning-box'}">
+          <strong>测试完成</strong>
+          <p>成功: ${success} | 被限流: ${blocked} | 错误: ${error}</p>
+          <p>${rateLimitEnabled 
+            ? (blocked > 0 ? '✅ 限流防护生效！大部分恶意请求被拦截' : '⚠️ 限流可能配置过高')
+            : '⚠️ 限流未开启，所有请求都通过了'}</p>
+        </div>
+      `
+    }
+
+    async function resetServer() {
+      await fetch('/api/ddos/reset', { method: 'POST' })
+      document.getElementById('testResult').innerHTML = ''
+    }
+  </script>
+</body>
+</html>

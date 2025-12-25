@@ -8,6 +8,7 @@ import commentRouter from './routes/comment.js'
 import stealRouter from './routes/steal.js'
 import sqlRouter from './routes/sql.js'
 import csrfRouter from './routes/csrf.js'
+import ddosRouter from './routes/ddos.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -22,6 +23,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use('/xss', express.static(join(__dirname, '../client/xss')))
 app.use('/sql', express.static(join(__dirname, '../client/sql')))
 app.use('/csrf', express.static(join(__dirname, '../client/csrf')))
+app.use('/ddos', express.static(join(__dirname, '../client/ddos')))
 app.use('/', express.static(join(__dirname, '../client')))
 
 // API 路由
@@ -30,6 +32,7 @@ app.use('/api/comment', commentRouter)
 app.use('/api/steal', stealRouter)
 app.use('/api/sql', sqlRouter)
 app.use('/api/csrf', csrfRouter)
+app.use('/api/ddos', ddosRouter)
 
 // 首页
 app.get('/', (req, res) => {

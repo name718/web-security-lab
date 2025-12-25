@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DDoS Lab - 分布式拒绝服务攻击实验</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔵 DDoS Lab</h1>
+      <p class="subtitle">Distributed Denial of Service</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ 免责声明</strong>
+      <p>本实验仅在本地环境模拟，请勿对任何真实服务发起攻击！</p>
+    </div>
+
+    <section class="intro">
+      <h2>什么是 DDoS？</h2>
+      <p>DDoS（分布式拒绝服务）攻击通过大量请求耗尽服务器资源，使正常用户无法访问服务。</p>
+      
+      <div class="types">
+        <div class="type-card">
+          <h3>HTTP Flood</h3>
+          <p>发送大量 HTTP 请求耗尽服务器处理能力</p>
+        </div>
+        <div class="type-card">
+          <h3>Slowloris</h3>
+          <p>慢速发送请求，长时间占用连接</p>
+        </div>
+        <div class="type-card">
+          <h3>SYN Flood</h3>
+          <p>发送大量 TCP SYN 包（需系统级模拟）</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="labs">
+      <h2>📚 实验列表</h2>
+      
+      <a href="attack.html" class="lab-card">
+        <div class="lab-icon">⚔️</div>
+        <div class="lab-info">
+          <h3>实验一：HTTP Flood 攻击</h3>
+          <p>模拟大量并发请求，观察服务器过载</p>
+          <span class="difficulty medium">核心</span>
+        </div>
+      </a>
+
+      <a href="defense.html" class="lab-card">
+        <div class="lab-icon">🛡️</div>
+        <div class="lab-info">
+          <h3>实验二：限流防护</h3>
+          <p>学习 Rate Limiting 防护机制</p>
+          <span class="difficulty medium">防御</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>📊 攻击类型对比</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr><th>类型</th><th>原理</th><th>特点</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>HTTP Flood</td>
+            <td>大量 HTTP 请求</td>
+            <td>简单粗暴，易被识别</td>
+          </tr>
+          <tr>
+            <td>Slowloris</td>
+            <td>慢速发送，占用连接</td>
+            <td>低带宽，难检测</td>
+          </tr>
+          <tr>
+            <td>CC 攻击</td>
+            <td>请求耗资源的页面</td>
+            <td>针对应用层</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="defense">
+      <h2>🛡️ 防御方案</h2>
+      <ul>
+        <li><strong>Rate Limiting</strong> - 限制单 IP 请求频率</li>
+        <li><strong>CDN</strong> - 分散流量，隐藏源站</li>
+        <li><strong>WAF</strong> - Web 应用防火墙</li>
+        <li><strong>黑洞路由</strong> - 丢弃攻击流量</li>
+        <li><strong>验证码</strong> - 区分人机</li>
+      </ul>
+    </section>
+
+    <p style="margin-top: 2rem; text-align: center;">
+      <a href="/" style="color: #e94560;">← 返回首页</a>
+    </p>
+  </div>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

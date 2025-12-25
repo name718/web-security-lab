@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验一：HTTP Flood 攻击</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .stat-card {
+      background: #0f3460;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #4dabf7;
+    }
+    .stat-card .label {
+      color: #888;
+      font-size: 0.85rem;
+    }
+    .stat-card.danger .value { color: #ff6b6b; }
+    .stat-card.success .value { color: #51cf66; }
+    .progress-bar {
+      background: #0f3460;
+      border-radius: 4px;
+      height: 20px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+    .progress-bar .fill {
+      height: 100%;
+      background: #4dabf7;
+      transition: width 0.3s;
+    }
+    .progress-bar .fill.danger { background: #ff6b6b; }
+    .progress-bar .fill.warning { background: #fcc419; }
+    .log-container {
+      background: #0f3460;
+      border-radius: 4px;
+      padding: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .log-entry {
+      padding: 0.25rem 0;
+      border-bottom: 1px solid #1a1a2e;
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 DDoS Lab</a>
+    </nav>
+
+    <header>
+      <h1>⚔️ HTTP Flood 攻击模拟</h1>
+      <p class="subtitle">观察服务器在大量请求下的表现</p>
+    </header>
+
+    <section>
+      <h2>📊 服务器状态监控</h2>
+      <div class="dashboard">
+        <div class="stat-card">
+          <div class="value" id="totalRequests">0</div>
+          <div class="label">总请求数</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" id="rps">0</div>
+          <div class="label">请求/秒</div>
+        </div>
+        <div class="stat-card" id="connectionsCard">
+          <div class="value" id="connections">0</div>
+          <div class="label">活跃连接</div>
+        </div>
+        <div class="stat-card" id="statusCard">
+          <div class="value" id="serverStatus">正常</div>
+          <div class="label">服务器状态</div>
+        </div>
+      </div>
+      
+      <div>
+        <label>服务器负载:</label>
+        <div class="progress-bar">
+          <div class="fill" id="loadBar" style="width: 0%"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>🎮 攻击控制台</h2>
+      
+      <div class="controls">
+        <div>
+          <label>并发数:</label>
+          <input type="number" id="concurrency" value="50" min="1" max="500" style="width: 80px;">
+        </div>
+        <div>
+          <label>持续时间(秒):</label>
+          <input type="number" id="duration" value="5" min="1" max="30" style="width: 80px;">
+        </div>
+        <button class="btn" id="attackBtn" onclick="startAttack()">🚀 发起攻击</button>
+        <button class="btn btn-secondary" onclick="stopAttack()">⏹️ 停止</button>
+        <button class="btn btn-secondary" onclick="resetServer()">🔄 重置</button>
+      </div>
+
+      <div id="attackStatus" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>📋 请求日志</h2>
+      <div class="log-container" id="logContainer">
+        <div class="log-entry" style="color: #888;">等待请求...</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>📖 攻击原理</h2>
+      <div class="info-box">
+        <p><strong>HTTP Flood</strong> 是最常见的应用层 DDoS 攻击：</p>
+        <ol style="margin: 0.5rem 0 0 1.5rem;">
+          <li>攻击者控制大量"肉鸡"或使用代理</li>
+          <li>同时向目标服务器发送大量 HTTP 请求</li>
+          <li>服务器资源被耗尽（CPU、内存、连接数）</li>
+          <li>正常用户无法访问服务</li>
+        </ol>
+      </div>
+      
+      <pre><code>// 攻击代码示意
+for (let i = 0; i < 1000; i++) {
+  fetch('/api/ddos/api')  // 大量并发请求
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>🛡️ 观察要点</h2>
+      <ul style="margin-left: 1.5rem;">
+        <li>观察"活跃连接"数量上升</li>
+        <li>当连接数超过阈值，服务器状态变为"过载"</li>
+        <li>响应时间显著增加</li>
+        <li>部分请求返回 503 错误</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    let attackInterval = null
+    let isAttacking = false
+
+    // 定时刷新状态
+    setInterval(updateStatus, 500)
+
+    async function updateStatus() {
+      try {
+        const res = await fetch('/api/ddos/status')
+        const data = await res.json()
+        
+        document.getElementById('totalRequests').textContent = data.totalRequests
+        document.getElementById('rps').textContent = data.requestsPerSecond
+        document.getElementById('connections').textContent = data.activeConnections
+        
+        const load = Math.round(data.activeConnections / data.maxConnections * 100)
+        const loadBar = document.getElementById('loadBar')
+        loadBar.style.width = `${Math.min(load, 100)}%`
+        loadBar.className = 'fill' + (load > 80 ? ' danger' : load > 50 ? ' warning' : '')
+        
+        const statusEl = document.getElementById('serverStatus')
+        const statusCard = document.getElementById('statusCard')
+        const connectionsCard = document.getElementById('connectionsCard')
+        
+        if (data.isOverloaded) {
+          statusEl.textContent = '过载!'
+          statusCard.className = 'stat-card danger'
+          connectionsCard.className = 'stat-card danger'
+        } else {
+          statusEl.textContent = '正常'
+          statusCard.className = 'stat-card success'
+          connectionsCard.className = 'stat-card'
+        }
+      } catch (e) {
+        document.getElementById('serverStatus').textContent = '无响应'
+      }
+    }
+
+    async function updateLogs() {
+      try {
+        const res = await fetch('/api/ddos/logs')
+        const logs = await res.json()
+        
+        const container = document.getElementById('logContainer')
+        if (logs.length === 0) {
+          container.innerHTML = '<div class="log-entry" style="color: #888;">暂无日志</div>'
+          return
+        }
+        
+        container.innerHTML = logs.slice(0, 20).map(log => 
+          `<div class="log-entry">[${log.time}] ${log.ip} → ${log.path}</div>`
+        ).join('')
+      } catch (e) {}
+    }
+
+    async function startAttack() {
+      if (isAttacking) return
+      
+      const concurrency = parseInt(document.getElementById('concurrency').value)
+      const duration = parseInt(document.getElementById('duration').value)
+      
+      isAttacking = true
+      document.getElementById('attackBtn').disabled = true
+      document.getElementById('attackStatus').innerHTML = 
+        `<div class="warning-box">🚀 攻击进行中... 并发: ${concurrency}, 持续: ${duration}秒</div>`
+      
+      const startTime = Date.now()
+      let requestCount = 0
+      let successCount = 0
+      let errorCount = 0
+      
+      // 发起攻击
+      attackInterval = setInterval(async () => {
+        if (Date.now() - startTime > duration * 1000) {
+          stopAttack()
+          return
+        }
+        
+        // 并发请求
+        const promises = []
+        for (let i = 0; i < concurrency; i++) {
+          promises.push(
+            fetch('/api/ddos/api')
+              .then(r => {
+                requestCount++
+                if (r.ok) successCount++
+                else errorCount++
+              })
+              .catch(() => {
+                requestCount++
+                errorCount++
+              })
+          )
+        }
+        
+        await Promise.all(promises)
+        updateLogs()
+      }, 100)
+      
+      // 攻击结束后显示统计
+      setTimeout(() => {
+        if (!isAttacking) return
+        stopAttack()
+        document.getElementById('attackStatus').innerHTML = `
+          <div class="info-box">
+            <strong>攻击完成</strong>
+            <p>总请求: ${requestCount}</p>
+            <p>成功: ${successCount} | 失败: ${errorCount}</p>
+            <p>错误率: ${(errorCount / requestCount * 100).toFixed(1)}%</p>
+          </div>
+        `
+      }, duration * 1000 + 500)
+    }
+
+    function stopAttack() {
+      isAttacking = false
+      if (attackInterval) {
+        clearInterval(attackInterval)
+        attackInterval = null
+      }
+      document.getElementById('attackBtn').disabled = false
+      if (!document.getElementById('attackStatus').innerHTML.includes('攻击完成')) {
+        document.getElementById('attackStatus').innerHTML = 
+          '<div class="success-box">攻击已停止</div>'
+      }
+    }
+
+    async function resetServer() {
+      await fetch('/api/ddos/reset', { method: 'POST' })
+      document.getElementById('attackStatus').innerHTML = ''
+      updateLogs()
+    }
+  </script>
+</body>
+</html>
