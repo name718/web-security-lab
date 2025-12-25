@@ -1,0 +1,20 @@
+# Render.com Blueprint - 两个服务部署配置
+services:
+  # 实验服务器 (Node.js)
+  - type: web
+    name: security-lab-server
+    runtime: node
+    rootDir: packages/server
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  # 文档站点 (静态站点)
+  - type: web
+    name: security-lab-docs
+    runtime: static
+    rootDir: packages/docs
+    buildCommand: npm install && npm run build
+    staticPublishPath: .vitepress/dist

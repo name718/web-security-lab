@@ -1,3 +1,6 @@
+// 实验服务器地址 - 部署后替换为实际地址
+const LAB_SERVER_URL = process.env.LAB_SERVER_URL || 'https://security-lab-server.onrender.com'
+
 export default {
   title: 'Security Lab',
   description: '网络安全攻击案例学习平台',
@@ -8,7 +11,7 @@ export default {
       { text: '首页', link: '/' },
       { text: '快速开始', link: '/guide/getting-started' },
       { text: '实验列表', link: '/labs/' },
-      { text: '实验平台', link: 'http://localhost:4000', target: '_blank' }
+      { text: '实验平台', link: LAB_SERVER_URL, target: '_blank' }
     ],
     sidebar: {
       '/guide/': [

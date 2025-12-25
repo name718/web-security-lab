@@ -22,7 +22,7 @@ import credentialRouter from './routes/credential.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
-const PORT = 4000
+const PORT = process.env.PORT || 4000
 
 // 中间件
 app.use(cors())
