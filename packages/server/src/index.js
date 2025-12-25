@@ -17,6 +17,7 @@ import clickjackingRouter from './routes/clickjacking.js'
 import infoleakRouter from './routes/infoleak.js'
 import replayRouter from './routes/replay.js'
 import fileuploadRouter from './routes/fileupload.js'
+import mitmRouter from './routes/mitm.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -40,6 +41,7 @@ app.use('/clickjacking', express.static(join(__dirname, '../client/clickjacking'
 app.use('/infoleak', express.static(join(__dirname, '../client/infoleak')))
 app.use('/replay', express.static(join(__dirname, '../client/replay')))
 app.use('/fileupload', express.static(join(__dirname, '../client/fileupload')))
+app.use('/mitm', express.static(join(__dirname, '../client/mitm')))
 app.use('/', express.static(join(__dirname, '../client')))
 
 // API 路由
@@ -57,6 +59,7 @@ app.use('/api/clickjacking', clickjackingRouter)
 app.use('/api/infoleak', infoleakRouter)
 app.use('/api/replay', replayRouter)
 app.use('/api/fileupload', fileuploadRouter)
+app.use('/api/mitm', mitmRouter)
 
 // 首页
 app.get('/', (req, res) => {

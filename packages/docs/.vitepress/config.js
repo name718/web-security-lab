@@ -55,7 +55,8 @@ export default {
           items: [
             { text: '敏感信息泄露', link: '/labs/infoleak' },
             { text: 'Token 重放攻击', link: '/labs/replay' },
-            { text: '文件上传漏洞', link: '/labs/fileupload' }
+            { text: '文件上传漏洞', link: '/labs/fileupload' },
+            { text: '中间人攻击', link: '/labs/mitm' }
           ]
         }
       ]

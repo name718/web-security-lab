@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>流量嗅探 - 中间人攻击</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .network-diagram { display: flex; justify-content: space-around; align-items: center; padding: 20px; background: #f5f5f5; border-radius: 8px; margin: 15px 0; }
+    .node { text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .node.attacker { background: #ffebee; border: 2px solid #f44336; }
+    .arrow { font-size: 24px; color: #666; }
+    .packet-box { background: #1a1a2e; color: #0f0; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; margin: 10px 0; max-height: 200px; overflow: auto; }
+    .intercepted { background: #ffebee; border: 2px solid #f44336; padding: 15px; border-radius: 8px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回中间人攻击</a>
+    <h1>👁️ 实验一：流量嗅探</h1>
+
+    <div class="warning-box">
+      <strong>⚠️ 攻击场景</strong>
+      <p>HTTP 明文传输时，攻击者可以截获所有数据，包括密码</p>
+    </div>
+
+    <section>
+      <h2>🌐 网络拓扑</h2>
+      <div class="network-diagram">
+        <div class="node">
+          <div style="font-size: 32px;">👤</div>
+          <div>用户</div>
+        </div>
+        <div class="arrow">──📡──</div>
+        <div class="node attacker">
+          <div style="font-size: 32px;">🕵️</div>
+          <div>攻击者</div>
+          <small>(嗅探流量)</small>
+        </div>
+        <div class="arrow">──📡──</div>
+        <div class="node">
+          <div style="font-size: 32px;">🖥️</div>
+          <div>服务器</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>🎮 攻击演示</h2>
+      
+      <div class="info-box">
+        <h3>用户登录（HTTP 明文）</h3>
+        <div>
+          <input type="text" id="username" value="alice" placeholder="用户名" style="padding: 8px; margin: 5px;">
+          <input type="password" id="password" value="alice123" placeholder="密码" style="padding: 8px; margin: 5px;">
+          <button onclick="loginUnsafe()" class="btn">登录 (HTTP)</button>
+        </div>
+        <div id="login-result" style="margin-top: 10px;"></div>
+      </div>
+
+      <div class="intercepted">
+        <h3>🔴 攻击者截获的数据</h3>
+        <div class="packet-box" id="intercepted-data">
+等待截获数据...
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>📦 HTTP 数据包分析</h2>
+      <div class="packet-box">
+POST /api/login HTTP/1.1
+Host: bank.com
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "alice123"  ← <span style="color: #f44336;">明文密码！</span>
+}
+      </div>
+    </section>
+
+    <section>
+      <h2>🛡️ 对比：HTTPS 加密</h2>
+      <div class="info-box">
+        <button onclick="loginSafe()" class="btn" style="background: #4caf50;">登录 (HTTPS)</button>
+        <div id="safe-result" style="margin-top: 10px;"></div>
+      </div>
+      <div class="packet-box" style="background: #1b5e20;">
+TLS 1.3 Encrypted Application Data
+17 03 03 00 45 8a 2f 9c 3b ... <span style="color: #81c784;">← 加密数据，无法读取</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>💀 真实攻击工具</h2>
+      <table class="info-table">
+        <tr><th>工具</th><th>功能</th></tr>
+        <tr><td>Wireshark</td><td>网络协议分析器</td></tr>
+        <tr><td>tcpdump</td><td>命令行抓包工具</td></tr>
+        <tr><td>Ettercap</td><td>中间人攻击框架</td></tr>
+        <tr><td>mitmproxy</td><td>HTTP/HTTPS 代理</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    async function loginUnsafe() {
+      const username = document.getElementById('username').value
+      const password = document.getElementById('password').value
+      
+      const res = await fetch('/api/mitm/unsafe/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await res.json()
+      document.getElementById('login-result').innerHTML = 
+        `<span style="color: ${data.success ? '#4caf50' : '#f44336'}">${data.success ? '✅' : '❌'} ${data.message || data.error}</span>`
+      
+      // 显示截获的数据
+      const intercepted = await fetch('/api/mitm/intercepted')
+      const list = await intercepted.json()
+      const latest = list[list.length - 1]
+      if (latest) {
+        document.getElementById('intercepted-data').innerHTML = `
+[${latest.timestamp}] 截获 ${latest.type} 请求
+协议: ${latest.protocol} (未加密)
+数据: ${JSON.stringify(latest.data, null, 2)}
+
+⚠️ ${latest.warning}
+        `
+      }
+    }
+    
+    async function loginSafe() {
+      const username = document.getElementById('username').value
+      const password = document.getElementById('password').value
+      
+      const res = await fetch('/api/mitm/safe/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await res.json()
+      document.getElementById('safe-result').innerHTML = 
+        `<span style="color: #4caf50">🔒 ${data.message} - 数据已加密，攻击者无法读取</span>`
+    }
+  </script>
+</body>
+</html>

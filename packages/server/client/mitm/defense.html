@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>防护方案 - 中间人攻击</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .compare-box { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0; }
+    @media (max-width: 768px) { .compare-box { grid-template-columns: 1fr; } }
+    .unsafe-box { border: 2px solid #f44336; padding: 15px; border-radius: 8px; background: #ffebee; }
+    .safe-box { border: 2px solid #4caf50; padding: 15px; border-radius: 8px; background: #e8f5e9; }
+    .packet-box { background: #263238; color: #aed581; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回中间人攻击</a>
+    <h1>🛡️ 实验三：防护方案</h1>
+
+    <div class="info-box">
+      <strong>核心防护思路</strong>
+      <p>加密传输 + 完整性校验 + 身份验证</p>
+    </div>
+
+    <section>
+      <h2>🔐 HTTPS 加密</h2>
+      <div class="compare-box">
+        <div class="unsafe-box">
+          <h3>❌ HTTP 明文</h3>
+          <div class="packet-box" style="background: #1a1a2e; color: #f44336;">
+POST /login HTTP/1.1
+
+{"username":"alice","password":"secret123"}
+
+⚠️ 攻击者可直接读取
+          </div>
+        </div>
+        <div class="safe-box">
+          <h3>✅ HTTPS 加密</h3>
+          <div class="packet-box">
+TLS 1.3 Application Data
+
+17 03 03 00 45 8a 2f 9c 3b e7 ...
+
+🔒 加密数据，无法解读
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>✍️ 数字签名</h2>
+      <div class="info-box">
+        <p>对请求数据签名，服务器验证签名，篡改后签名失效</p>
+        <pre><code>// 客户端签名
+const data = { from: 'alice', to: 'bob', amount: 1000 }
+const signature = HMAC(JSON.stringify(data), secretKey)
+
+// 服务端验证
+const expectedSig = HMAC(JSON.stringify(req.body), secretKey)
+if (signature !== expectedSig) {
+  throw new Error('签名验证失败，数据可能被篡改')
+}</code></pre>
+      </div>
+      
+      <h3>演示</h3>
+      <button onclick="transferWithSignature()" class="btn" style="background: #4caf50;">带签名转账</button>
+      <button onclick="transferTampered()" class="btn" style="background: #f44336;">篡改后转账</button>
+      <div id="sig-result" class="info-box" style="margin-top: 10px;">点击按钮测试...</div>
+    </section>
+
+    <section>
+      <h2>📜 HSTS (HTTP Strict Transport Security)</h2>
+      <div class="info-box">
+        <p>强制浏览器使用 HTTPS，防止 SSL 剥离攻击</p>
+        <pre><code>// 响应头
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+// 效果
+1. 浏览器自动将 HTTP 请求升级为 HTTPS
+2. 证书错误时拒绝连接（无法点击继续）
+3. 预加载列表可防止首次访问被攻击</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>📌 证书固定 (Certificate Pinning)</h2>
+      <div class="info-box">
+        <p>客户端预置服务器证书指纹，防止伪造证书</p>
+        <pre><code>// 移动端实现
+const expectedFingerprint = 'sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+
+func validateCertificate(cert) {
+  const fingerprint = sha256(cert.publicKey)
+  if (fingerprint !== expectedFingerprint) {
+    throw new Error('证书不匹配，可能存在中间人攻击')
+  }
+}</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>📋 防护检查清单</h2>
+      <table class="info-table">
+        <tr><th>措施</th><th>防护目标</th><th>实现方式</th></tr>
+        <tr><td>HTTPS</td><td>数据加密</td><td>TLS 证书</td></tr>
+        <tr><td>HSTS</td><td>防 SSL 剥离</td><td>响应头</td></tr>
+        <tr><td>证书固定</td><td>防伪造证书</td><td>客户端校验</td></tr>
+        <tr><td>数字签名</td><td>数据完整性</td><td>HMAC/RSA</td></tr>
+        <tr><td>双向认证</td><td>身份验证</td><td>客户端证书</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    async function transferWithSignature() {
+      const data = { from: 'alice', to: 'bob', amount: 100 }
+      // 模拟正确签名
+      const signature = btoa(`${data.from}:${data.to}:${data.amount}:secret`)
+      
+      const res = await fetch('/api/mitm/safe/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, signature })
+      })
+      const result = await res.json()
+      
+      document.getElementById('sig-result').innerHTML = `
+        <span style="color: #4caf50">✅ ${result.message}</span>
+        <br>签名验证通过，转账成功
+      `
+    }
+    
+    async function transferTampered() {
+      // 模拟篡改：签名是 bob，但数据改成 attacker
+      const signature = btoa('alice:bob:100:secret')
+      
+      const res = await fetch('/api/mitm/safe/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          from: 'alice', 
+          to: 'attacker',  // 篡改收款人
+          amount: 100, 
+          signature 
+        })
+      })
+      const result = await res.json()
+      
+      document.getElementById('sig-result').innerHTML = `
+        <span style="color: #f44336">❌ ${result.error}</span>
+        <br>数据被篡改，签名不匹配，请求被拒绝
+      `
+    }
+  </script>
+</body>
+</html>

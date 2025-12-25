@@ -28,6 +28,7 @@
 | Info Leak | 敏感信息泄露 | Debug接口、错误堆栈、配置暴露 |
 | Replay | Token重放攻击 | 设备绑定、Nonce防护 |
 | File Upload | 文件上传漏洞 | 后缀绕过、MIME欺骗 |
+| MITM | 中间人攻击 | 流量嗅探、数据篡改、HTTPS防护 |
 
 ## 🚀 快速开始
 

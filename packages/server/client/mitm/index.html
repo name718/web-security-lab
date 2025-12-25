@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中间人攻击 (MITM) - Security Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← 返回首页</a>
+    <h1>🕵️ 中间人攻击 (MITM)</h1>
+    
+    <div class="warning-box">
+      <strong>⚠️ 学习目的</strong>
+      <p>中间人攻击是指攻击者插入通信双方之间，窃听或篡改数据</p>
+    </div>
+
+    <section>
+      <h2>📖 攻击原理</h2>
+      <div class="info-box">
+        <pre>
+    客户端                攻击者                服务器
+       │                    │                    │
+       │ ──── 请求 ────→   │                    │
+       │                    │ ──── 请求 ────→   │
+       │                    │ ←─── 响应 ────    │
+       │ ←─── 响应 ────    │                    │
+       │                    │                    │
+       │    攻击者可以：                         │
+       │    1. 窃听数据                          │
+       │    2. 篡改请求/响应                     │
+       │    3. 注入恶意内容                      │
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 实验列表</h2>
+      
+      <a href="sniff.html" class="lab-card">
+        <div class="lab-icon">👁️</div>
+        <div class="lab-info">
+          <h3>实验一：流量嗅探</h3>
+          <p>HTTP 明文传输，密码被截获</p>
+          <span class="difficulty hard">攻击演示</span>
+        </div>
+      </a>
+
+      <a href="tamper.html" class="lab-card">
+        <div class="lab-icon">✏️</div>
+        <div class="lab-info">
+          <h3>实验二：数据篡改</h3>
+          <p>修改转账收款人，资金被劫持</p>
+          <span class="difficulty hard">攻击演示</span>
+        </div>
+      </a>
+
+      <a href="defense.html" class="lab-card">
+        <div class="lab-icon">🛡️</div>
+        <div class="lab-info">
+          <h3>实验三：防护方案</h3>
+          <p>HTTPS 加密、证书校验、数据签名</p>
+          <span class="difficulty medium">防护方案</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>📊 通信监控</h2>
+      <div id="monitor" class="info-box" style="max-height: 300px; overflow: auto;">
+        <p>暂无通信记录</p>
+      </div>
+      <button onclick="loadComms()" class="btn btn-secondary" style="margin-top: 10px;">刷新</button>
+      <button onclick="resetAll()" class="btn btn-secondary" style="margin-top: 10px;">重置</button>
+    </section>
+
+    <section>
+      <h2>🔧 常见 MITM 攻击方式</h2>
+      <table class="info-table">
+        <tr><th>方式</th><th>原理</th><th>防护</th></tr>
+        <tr><td>ARP 欺骗</td><td>伪造 MAC 地址</td><td>静态 ARP、ARP 防护</td></tr>
+        <tr><td>DNS 劫持</td><td>伪造 DNS 响应</td><td>DNSSEC、DoH</td></tr>
+        <tr><td>SSL 剥离</td><td>降级 HTTPS 为 HTTP</td><td>HSTS</td></tr>
+        <tr><td>伪造证书</td><td>自签名证书欺骗</td><td>证书固定</td></tr>
+        <tr><td>WiFi 钓鱼</td><td>伪造热点</td><td>VPN、验证网络</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    async function loadComms() {
+      const res = await fetch('/api/mitm/communications')
+      const comms = await res.json()
+      if (comms.length === 0) {
+        document.getElementById('monitor').innerHTML = '<p>暂无通信记录</p>'
+      } else {
+        document.getElementById('monitor').innerHTML = comms.map(c => `
+          <div style="padding: 8px; margin: 5px 0; background: ${c.encrypted ? '#e8f5e9' : '#ffebee'}; border-radius: 4px; border-left: 3px solid ${c.encrypted ? '#4caf50' : '#f44336'};">
+            <strong>${c.type}</strong> [${c.protocol}] ${c.encrypted ? '🔒' : '⚠️'}
+            <br><small>${c.timestamp}</small>
+            ${!c.encrypted ? `<br><code style="color: #f44336;">${JSON.stringify(c.data)}</code>` : ''}
+          </div>
+        `).join('')
+      }
+    }
+    async function resetAll() {
+      await fetch('/api/mitm/reset', { method: 'POST' })
+      loadComms()
+    }
+    loadComms()
+  </script>
+</body>
+</html>

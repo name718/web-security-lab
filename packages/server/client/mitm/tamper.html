@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据篡改 - 中间人攻击</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .transfer-flow { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 20px; background: #f5f5f5; border-radius: 8px; margin: 15px 0; flex-wrap: wrap; }
+    .flow-box { padding: 15px; background: white; border-radius: 8px; text-align: center; min-width: 100px; }
+    .flow-box.original { border: 2px solid #4caf50; }
+    .flow-box.tampered { border: 2px solid #f44336; background: #ffebee; }
+    .flow-arrow { font-size: 20px; }
+    .balance-card { display: inline-block; padding: 15px 25px; margin: 10px; background: #e3f2fd; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回中间人攻击</a>
+    <h1>✏️ 实验二：数据篡改</h1>
+
+    <div class="warning-box">
+      <strong>⚠️ 攻击场景</strong>
+      <p>攻击者不仅能窃听，还能修改传输中的数据，如篡改转账收款人</p>
+    </div>
+
+    <section>
+      <h2>💰 账户余额</h2>
+      <div id="balances">
+        <div class="balance-card">
+          <div>👤 Alice</div>
+          <div style="font-size: 24px; font-weight: bold;">¥<span id="alice-balance">10000</span></div>
+        </div>
+        <div class="balance-card">
+          <div>👤 Bob</div>
+          <div style="font-size: 24px; font-weight: bold;">¥<span id="bob-balance">5000</span></div>
+        </div>
+      </div>
+      <button onclick="resetAll()" class="btn btn-secondary">重置账户</button>
+    </section>
+
+    <section>
+      <h2>🎮 正常转账 vs 篡改攻击</h2>
+      
+      <div class="info-box">
+        <h3>Alice 想转账给 Bob</h3>
+        <p>金额: ¥<input type="number" id="amount" value="1000" style="width: 80px; padding: 5px;"></p>
+        <button onclick="normalTransfer()" class="btn">正常转账</button>
+        <button onclick="tamperedTransfer()" class="btn" style="background: #f44336;">模拟篡改攻击</button>
+      </div>
+
+      <div class="transfer-flow" id="transfer-flow">
+        <div class="flow-box original">
+          <div>📤 Alice</div>
+          <div>发送</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" id="flow-middle">
+          <div>📦 数据包</div>
+          <div id="flow-to">to: bob</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box original">
+          <div>📥 Bob</div>
+          <div>接收</div>
+        </div>
+      </div>
+
+      <div id="result" class="info-box" style="margin-top: 15px;">
+        点击按钮查看结果...
+      </div>
+    </section>
+
+    <section>
+      <h2>🔍 篡改过程</h2>
+      <div class="info-box">
+        <pre>
+原始请求:
+POST /transfer
+{ "from": "alice", "to": "bob", "amount": 1000 }
+                    ↓
+            攻击者截获并修改
+                    ↓
+篡改后请求:
+POST /transfer
+{ "from": "alice", "to": "attacker", "amount": 1000 }
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>🛡️ 防护方案</h2>
+      <table class="info-table">
+        <tr><th>方案</th><th>原理</th></tr>
+        <tr><td>HTTPS</td><td>TLS 加密，无法读取和修改</td></tr>
+        <tr><td>数字签名</td><td>对请求签名，篡改后签名失效</td></tr>
+        <tr><td>HMAC</td><td>消息认证码验证完整性</td></tr>
+        <tr><td>证书固定</td><td>防止伪造证书的 MITM</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    async function loadBalance() {
+      const res = await fetch('/api/mitm/balance')
+      const data = await res.json()
+      document.getElementById('alice-balance').textContent = data.alice
+      document.getElementById('bob-balance').textContent = data.bob
+    }
+    
+    async function normalTransfer() {
+      const amount = parseInt(document.getElementById('amount').value)
+      
+      // 更新流程图
+      document.getElementById('flow-middle').className = 'flow-box original'
+      document.getElementById('flow-to').textContent = 'to: bob'
+      
+      const res = await fetch('/api/mitm/unsafe/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: 'alice', to: 'bob', amount })
+      })
+      const data = await res.json()
+      
+      document.getElementById('result').innerHTML = `
+        <span style="color: #4caf50">✅ ${data.message}</span>
+        <br>Alice → Bob: ¥${amount}
+      `
+      loadBalance()
+    }
+    
+    async function tamperedTransfer() {
+      const amount = parseInt(document.getElementById('amount').value)
+      
+      // 更新流程图显示篡改
+      document.getElementById('flow-middle').className = 'flow-box tampered'
+      document.getElementById('flow-to').innerHTML = '<s>to: bob</s><br><span style="color: red;">to: attacker</span>'
+      
+      const res = await fetch('/api/mitm/attack/tamper', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ originalTo: 'bob', tamperedTo: 'attacker', amount })
+      })
+      const data = await res.json()
+      
+      document.getElementById('result').innerHTML = `
+        <span style="color: #f44336">🔴 ${data.message}</span>
+        <br>Alice 以为转给 Bob，实际转给了 attacker！
+        <br>¥${amount} 被劫持
+      `
+      loadBalance()
+    }
+    
+    async function resetAll() {
+      await fetch('/api/mitm/reset', { method: 'POST' })
+      loadBalance()
+      document.getElementById('flow-middle').className = 'flow-box original'
+      document.getElementById('flow-to').textContent = 'to: bob'
+      document.getElementById('result').textContent = '点击按钮查看结果...'
+    }
+    
+    loadBalance()
+  </script>
+</body>
+</html>
