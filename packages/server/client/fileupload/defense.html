@@ -7,9 +7,9 @@
   <link rel="stylesheet" href="../xss/style.css">
   <style>
     .upload-box { border: 2px solid #4caf50; padding: 20px; border-radius: 8px; margin: 15px 0; background: #f1f8e9; }
-    .check-item { padding: 8px; margin: 5px 0; background: white; border-radius: 4px; display: flex; align-items: center; }
+    .check-item { padding: 8px; margin: 5px 0; background: #0f3460; border-radius: 4px; display: flex; align-items: center; color: #eee; }
     .check-icon { margin-right: 10px; font-size: 18px; }
-    .result-box { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-top: 15px; }
+    .result-box { background: #0f3460; padding: 15px; border-radius: 8px; margin-top: 15px; color: #ccc; }
   </style>
 </head>
 <body>
@@ -128,7 +128,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       const icons = ['✅', '❌']
       results.forEach((passed, i) => {
         checks[i].querySelector('.check-icon').textContent = passed ? '✅' : '❌'
-        checks[i].style.background = passed ? '#e8f5e9' : '#ffebee'
+        checks[i].style.background = passed ? '#1b4332' : '#3d1f1f'
+        checks[i].style.color = passed ? '#4caf50' : '#ff6b6b'
       })
     }
     

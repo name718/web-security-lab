@@ -80,9 +80,9 @@
         document.getElementById('sessions').innerHTML = '<p>暂无活跃 Session</p>'
       } else {
         document.getElementById('sessions').innerHTML = data.map(s => 
-          `<div style="margin: 5px 0; padding: 5px; background: #f5f5f5; border-radius: 4px;">
+          `<div style="margin: 5px 0; padding: 5px; background: #0f3460; border-radius: 4px; color: #eee;">
             <strong>${s.username}</strong> - ${s.token}<br>
-            <small>设备: ${s.deviceId || s.device?.substring(0, 30) || 'unknown'}...</small>
+            <small style="color: #888;">设备: ${s.deviceId || s.device?.substring(0, 30) || 'unknown'}...</small>
           </div>`
         ).join('')
       }

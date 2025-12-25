@@ -91,9 +91,9 @@
         document.getElementById('file-list').innerHTML = '<p>暂无上传文件</p>'
       } else {
         document.getElementById('file-list').innerHTML = files.map(f => `
-          <div style="padding: 8px; margin: 5px 0; background: #f5f5f5; border-radius: 4px; border-left: 3px solid ${f.vulnerability === 'none' ? '#4caf50' : '#f44336'};">
-            <strong>${f.filename}</strong> <small>(${f.mime})</small>
-            <br><small>漏洞类型: ${f.vulnerability}</small>
+          <div style="padding: 8px; margin: 5px 0; background: #0f3460; border-radius: 4px; border-left: 3px solid ${f.vulnerability === 'none' ? '#4caf50' : '#f44336'}; color: #eee;">
+            <strong>${f.filename}</strong> <small style="color: #888;">(${f.mime})</small>
+            <br><small style="color: #888;">漏洞类型: ${f.vulnerability}</small>
           </div>
         `).join('')
       }
