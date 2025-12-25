@@ -22,6 +22,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use('/xss', express.static(join(__dirname, '../client/xss')))
 app.use('/sql', express.static(join(__dirname, '../client/sql')))
 app.use('/csrf', express.static(join(__dirname, '../client/csrf')))
+app.use('/', express.static(join(__dirname, '../client')))
 
 // API 路由
 app.use('/api/search', searchRouter)
@@ -30,9 +31,9 @@ app.use('/api/steal', stealRouter)
 app.use('/api/sql', sqlRouter)
 app.use('/api/csrf', csrfRouter)
 
-// 首页重定向
+// 首页
 app.get('/', (req, res) => {
-  res.redirect('/xss/index.html')
+  res.sendFile(join(__dirname, '../client/index.html'))
 })
 
 // 健康检查

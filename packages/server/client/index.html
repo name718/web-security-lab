@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Lab - 网络安全攻击实验平台</title>
+  <link rel="stylesheet" href="xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <header style="text-align: center; margin-bottom: 2rem;">
+      <h1 style="font-size: 2.5rem;">🔐 Security Lab</h1>
+      <p class="subtitle">网络安全攻击案例学习平台</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ 免责声明</strong>
+      <p>本平台仅供学习和研究目的，请勿将所学知识用于非法用途！</p>
+    </div>
+
+    <section>
+      <h2>📚 实验列表</h2>
+      
+      <a href="/xss/index.html" class="lab-card">
+        <div class="lab-icon">🔴</div>
+        <div class="lab-info">
+          <h3>XSS 跨站脚本攻击</h3>
+          <p>反射型 XSS → 存储型 XSS → Token 窃取</p>
+          <div style="margin-top: 0.5rem;">
+            <span class="difficulty easy">反射型</span>
+            <span class="difficulty medium">存储型</span>
+            <span class="difficulty hard">凭证窃取</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="/sql/index.html" class="lab-card">
+        <div class="lab-icon">🟠</div>
+        <div class="lab-info">
+          <h3>SQL 注入攻击</h3>
+          <p>登录绕过 → UNION 注入 → 数据窃取</p>
+          <div style="margin-top: 0.5rem;">
+            <span class="difficulty easy">登录绕过</span>
+            <span class="difficulty medium">UNION注入</span>
+            <span class="difficulty medium">搜索注入</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="/csrf/index.html" class="lab-card">
+        <div class="lab-icon">🟡</div>
+        <div class="lab-info">
+          <h3>CSRF 跨站请求伪造</h3>
+          <p>模拟银行 → 钓鱼攻击 → Token 防护</p>
+          <div style="margin-top: 0.5rem;">
+            <span class="difficulty easy">银行系统</span>
+            <span class="difficulty medium">攻击演示</span>
+            <span class="difficulty medium">防护机制</span>
+          </div>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>🛠️ 技术栈</h2>
+      <div class="types">
+        <div class="type-card">
+          <h3>后端</h3>
+          <p>Express + Node.js</p>
+        </div>
+        <div class="type-card">
+          <h3>前端</h3>
+          <p>原生 HTML/CSS/JS</p>
+        </div>
+        <div class="type-card">
+          <h3>数据库</h3>
+          <p>SQLite (sql.js)</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>🚀 快速开始</h2>
+      <pre><code># 安装依赖
+pnpm install
+
+# 启动服务
+pnpm dev
+
+# 访问
+http://localhost:4000</code></pre>
+    </section>
+
+    <footer style="text-align: center; margin-top: 2rem; color: #666;">
+      <p>Made for learning purposes only 🎓</p>
+    </footer>
+  </div>
+</body>
+</html>
