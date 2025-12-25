@@ -5,6 +5,8 @@ export default {
   title: 'Security Lab',
   description: '网络安全攻击案例学习平台',
   base: '/',
+  // 忽略死链接检查（外部链接）
+  ignoreDeadLinks: true,
   themeConfig: {
     logo: '/logo.svg',
     nav: [
