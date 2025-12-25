@@ -1,5 +1,5 @@
-// 实验服务器地址 - 部署后替换为实际地址
-const LAB_SERVER_URL = process.env.LAB_SERVER_URL || 'https://security-lab-server.onrender.com'
+// 实验服务器地址 - 部署后替换为实际 Vercel 地址
+const LAB_SERVER_URL = process.env.LAB_SERVER_URL || 'https://security-lab-server.vercel.app'
 
 export default {
   title: 'Security Lab',

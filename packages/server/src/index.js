@@ -74,8 +74,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() })
 })
 
-app.listen(PORT, () => {
-  console.log(`
+// 本地开发启动
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`
 🔐 ========================================
    Security Lab Server 启动成功
    http://localhost:${PORT}
@@ -84,5 +86,9 @@ app.listen(PORT, () => {
 📚 XSS Lab:        /xss/index.html
 📚 SQL注入 Lab:    /sql/index.html
 📚 CSRF Lab:       /csrf/index.html
-  `)
-})
+    `)
+  })
+}
+
+// Vercel Serverless 导出
+export default app

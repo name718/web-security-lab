@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "client/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "src/index.js" },
+    { "src": "/xss/(.*)", "dest": "client/xss/$1" },
+    { "src": "/sql/(.*)", "dest": "client/sql/$1" },
+    { "src": "/csrf/(.*)", "dest": "client/csrf/$1" },
+    { "src": "/ddos/(.*)", "dest": "client/ddos/$1" },
+    { "src": "/jwt/(.*)", "dest": "client/jwt/$1" },
+    { "src": "/phishing/(.*)", "dest": "client/phishing/$1" },
+    { "src": "/idor/(.*)", "dest": "client/idor/$1" },
+    { "src": "/rbac/(.*)", "dest": "client/rbac/$1" },
+    { "src": "/clickjacking/(.*)", "dest": "client/clickjacking/$1" },
+    { "src": "/infoleak/(.*)", "dest": "client/infoleak/$1" },
+    { "src": "/replay/(.*)", "dest": "client/replay/$1" },
+    { "src": "/fileupload/(.*)", "dest": "client/fileupload/$1" },
+    { "src": "/mitm/(.*)", "dest": "client/mitm/$1" },
+    { "src": "/credential/(.*)", "dest": "client/credential/$1" },
+    { "src": "/(.*)", "dest": "client/$1" }
+  ]
+}
