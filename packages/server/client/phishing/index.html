@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phishing Lab - 钓鱼攻击实验</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎣 Phishing Lab</h1>
+      <p class="subtitle">钓鱼攻击实验</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ 免责声明</strong>
+      <p>本实验仅供学习目的，请勿将所学知识用于非法用途！钓鱼攻击是违法行为！</p>
+    </div>
+
+    <section class="intro">
+      <h2>什么是钓鱼攻击？</h2>
+      <p>钓鱼攻击通过伪造可信网站，诱骗用户输入敏感信息（账号密码、银行卡号等）。</p>
+      
+      <div class="types">
+        <div class="type-card">
+          <h3>仿冒网站</h3>
+          <p>复制真实网站的外观，域名相似</p>
+        </div>
+        <div class="type-card">
+          <h3>钓鱼邮件</h3>
+          <p>伪装成官方邮件，诱导点击链接</p>
+        </div>
+        <div class="type-card">
+          <h3>社工攻击</h3>
+          <p>利用心理学技巧获取信息</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="labs">
+      <h2>📚 实验列表</h2>
+      
+      <a href="real-site.html" class="lab-card">
+        <div class="lab-icon">🏦</div>
+        <div class="lab-info">
+          <h3>真实网站（对照）</h3>
+          <p>这是"真实"的银行登录页面</p>
+          <span class="difficulty easy">正常</span>
+        </div>
+      </a>
+
+      <a href="fake-site.html" class="lab-card">
+        <div class="lab-icon">🎭</div>
+        <div class="lab-info">
+          <h3>钓鱼网站（攻击）</h3>
+          <p>高仿的钓鱼页面，窃取用户凭证</p>
+          <span class="difficulty hard">危险</span>
+        </div>
+      </a>
+
+      <a href="attacker.html" class="lab-card">
+        <div class="lab-icon">👤</div>
+        <div class="lab-info">
+          <h3>攻击者后台</h3>
+          <p>查看被窃取的凭证</p>
+          <span class="difficulty medium">监控</span>
+        </div>
+      </a>
+
+      <a href="identify.html" class="lab-card">
+        <div class="lab-icon">🔍</div>
+        <div class="lab-info">
+          <h3>识别钓鱼网站</h3>
+          <p>学习如何识别钓鱼攻击</p>
+          <span class="difficulty easy">防御</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>🎯 攻击流程</h2>
+      <pre><code>1. 攻击者创建仿冒网站（外观与真实网站一致）
+2. 注册相似域名（如 paypa1.com 仿冒 paypal.com）
+3. 发送钓鱼邮件/短信，诱导用户点击链接
+4. 用户在假网站输入账号密码
+5. 凭证被发送到攻击者服务器
+6. 攻击者使用凭证登录真实网站</code></pre>
+    </section>
+
+    <section>
+      <h2>👤 测试账号</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr><th>用户名</th><th>密码</th><th>余额</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>zhangsan</td><td>zhang123</td><td>¥50,000</td></tr>
+          <tr><td>lisi</td><td>li456</td><td>¥30,000</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="defense">
+      <h2>🛡️ 防御建议</h2>
+      <ul>
+        <li><strong>检查 URL</strong> - 仔细核对域名是否正确</li>
+        <li><strong>查看证书</strong> - 确认 HTTPS 和证书信息</li>
+        <li><strong>不点可疑链接</strong> - 直接输入官网地址</li>
+        <li><strong>启用 2FA</strong> - 即使密码泄露也有保护</li>
+        <li><strong>密码管理器</strong> - 只在正确域名自动填充</li>
+      </ul>
+    </section>
+
+    <p style="margin-top: 2rem; text-align: center;">
+      <a href="/" style="color: #e94560;">← 返回首页</a>
+    </p>
+  </div>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

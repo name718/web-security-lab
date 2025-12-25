@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>攻击者后台</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 Phishing Lab</a>
+    </nav>
+
+    <header>
+      <h1>👤 攻击者后台</h1>
+      <p class="subtitle">Attacker Dashboard</p>
+    </header>
+
+    <section>
+      <h2>🎣 被窃取的凭证</h2>
+      <div style="margin-bottom: 1rem;">
+        <button class="btn" onclick="loadCredentials()">🔄 刷新</button>
+        <button class="btn btn-secondary" onclick="clearCredentials()">🗑️ 清空</button>
+      </div>
+      
+      <div id="credentialsList">
+        <p style="color: #888;">加载中...</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🔓 验证凭证</h2>
+      <p>测试被窃取的凭证是否能登录真实网站：</p>
+      
+      <div style="max-width: 300px; margin: 1rem 0;">
+        <div style="margin-bottom: 0.5rem;">
+          <input type="text" id="testUsername" placeholder="用户名">
+        </div>
+        <div style="margin-bottom: 0.5rem;">
+          <input type="password" id="testPassword" placeholder="密码">
+        </div>
+        <button class="btn" onclick="verifyCredential()">验证凭证</button>
+      </div>
+      
+      <div id="verifyResult"></div>
+    </section>
+
+    <section>
+      <h2>📊 攻击统计</h2>
+      <div class="types">
+        <div class="type-card">
+          <h3 id="totalCount">0</h3>
+          <p>总捕获数</p>
+        </div>
+        <div class="type-card">
+          <h3 id="validCount">-</h3>
+          <p>有效凭证</p>
+        </div>
+        <div class="type-card">
+          <h3 id="totalBalance">-</h3>
+          <p>潜在金额</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>🔗 钓鱼链接</h2>
+      <p>攻击者会通过以下方式传播钓鱼链接：</p>
+      
+      <div class="info-box">
+        <p><strong>钓鱼邮件示例：</strong></p>
+        <pre style="background: #fff; color: #333; padding: 1rem; margin-top: 0.5rem; border-radius: 4px;">
+尊敬的用户：
+
+您的账户存在安全风险，请立即登录验证：
+<a href="fake-site.html" style="color: blue;">https://secure-bank.com/verify</a>
+
+（实际链接指向钓鱼网站）
+
+安全银行客服
+        </pre>
+      </div>
+
+      <div class="warning-box" style="margin-top: 1rem;">
+        <strong>常见钓鱼域名技巧：</strong>
+        <ul style="margin: 0.5rem 0 0 1.5rem;">
+          <li>secure-bank.com → secure-bank.fake.com</li>
+          <li>paypal.com → paypa1.com (l→1)</li>
+          <li>google.com → g00gle.com (o→0)</li>
+          <li>apple.com → app1e.com</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    loadCredentials()
+
+    async function loadCredentials() {
+      const res = await fetch('/api/phishing/credentials')
+      const credentials = await res.json()
+      
+      document.getElementById('totalCount').textContent = credentials.length
+
+      const listEl = document.getElementById('credentialsList')
+      
+      if (credentials.length === 0) {
+        listEl.innerHTML = '<p style="color: #888;">暂无捕获的凭证</p>'
+        return
+      }
+
+      listEl.innerHTML = credentials.map((c, i) => `
+        <div class="card" style="margin-bottom: 0.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong style="color: #e94560;">#${credentials.length - i}</strong>
+              <span style="margin-left: 1rem;">👤 ${c.username}</span>
+              <span style="margin-left: 1rem;">🔑 ${c.password}</span>
+            </div>
+            <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" 
+                    onclick="fillCredential('${c.username}', '${c.password}')">
+              使用
+            </button>
+          </div>
+          <div style="font-size: 0.85rem; color: #888; margin-top: 0.5rem;">
+            来源: ${c.source} | 时间: ${c.time}
+          </div>
+        </div>
+      `).join('')
+    }
+
+    async function clearCredentials() {
+      if (!confirm('确定清空所有凭证？')) return
+      await fetch('/api/phishing/credentials', { method: 'DELETE' })
+      loadCredentials()
+    }
+
+    function fillCredential(username, password) {
+      document.getElementById('testUsername').value = username
+      document.getElementById('testPassword').value = password
+    }
+
+    async function verifyCredential() {
+      const username = document.getElementById('testUsername').value
+      const password = document.getElementById('testPassword').value
+      
+      if (!username || !password) {
+        alert('请输入用户名和密码')
+        return
+      }
+
+      const res = await fetch('/api/phishing/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await res.json()
+
+      const resultEl = document.getElementById('verifyResult')
+      if (data.valid) {
+        resultEl.innerHTML = `
+          <div class="warning-box">
+            <strong>🚨 凭证有效！</strong>
+            <p>${data.message}</p>
+            <p>账户余额: <strong style="color: #51cf66;">¥${data.balance.toLocaleString()}</strong></p>
+          </div>
+        `
+      } else {
+        resultEl.innerHTML = `
+          <div class="success-box">
+            <strong>❌ 凭证无效</strong>
+            <p>${data.message}</p>
+          </div>
+        `
+      }
+    }
+  </script>
+</body>
+</html>

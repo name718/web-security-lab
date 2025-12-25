@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>识别钓鱼网站</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 Phishing Lab</a>
+    </nav>
+
+    <header>
+      <h1>🔍 识别钓鱼网站</h1>
+      <p class="subtitle">How to Identify Phishing</p>
+    </header>
+
+    <section>
+      <h2>🎯 识别要点</h2>
+      
+      <div class="card" style="margin-bottom: 1rem;">
+        <h3 style="color: #e94560;">1. 检查 URL 域名</h3>
+        <p>这是最重要的识别方法！</p>
+        <div class="info-box" style="margin-top: 0.5rem;">
+          <p><strong>真实:</strong> <code>https://www.paypal.com/login</code></p>
+          <p><strong>钓鱼:</strong> <code>https://www.paypa1.com/login</code> (l→1)</p>
+          <p><strong>钓鱼:</strong> <code>https://paypal.fake-site.com/login</code></p>
+          <p><strong>钓鱼:</strong> <code>https://paypal-secure.com/login</code></p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 1rem;">
+        <h3 style="color: #e94560;">2. 查看 HTTPS 证书</h3>
+        <p>点击浏览器地址栏的锁图标，查看证书信息：</p>
+        <ul style="margin: 0.5rem 0 0 1.5rem;">
+          <li>证书颁发给谁？</li>
+          <li>证书是否有效？</li>
+          <li>是否是 EV 证书（显示公司名）？</li>
+        </ul>
+        <div class="warning-box" style="margin-top: 0.5rem;">
+          ⚠️ 注意：钓鱼网站也可以有 HTTPS！免费证书很容易获取。
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 1rem;">
+        <h3 style="color: #e94560;">3. 检查页面细节</h3>
+        <ul style="margin: 0.5rem 0 0 1.5rem;">
+          <li>拼写错误、语法问题</li>
+          <li>图片模糊、排版混乱</li>
+          <li>链接指向奇怪的地址</li>
+          <li>缺少正常网站应有的功能</li>
+        </ul>
+      </div>
+
+      <div class="card" style="margin-bottom: 1rem;">
+        <h3 style="color: #e94560;">4. 警惕紧急/恐吓信息</h3>
+        <p>钓鱼攻击常用的心理技巧：</p>
+        <ul style="margin: 0.5rem 0 0 1.5rem;">
+          <li>"您的账户将被冻结"</li>
+          <li>"24小时内必须验证"</li>
+          <li>"检测到异常登录"</li>
+          <li>"恭喜中奖，立即领取"</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 识别测试</h2>
+      <p>以下哪些是钓鱼网站？</p>
+      
+      <div id="quiz">
+        <div class="card quiz-item" style="margin-bottom: 0.5rem;">
+          <code>https://www.amazon.com/signin</code>
+          <div class="quiz-buttons" style="margin-top: 0.5rem;">
+            <button class="btn btn-secondary" onclick="checkAnswer(this, true)">✅ 真实</button>
+            <button class="btn btn-secondary" onclick="checkAnswer(this, false)">❌ 钓鱼</button>
+          </div>
+        </div>
+        
+        <div class="card quiz-item" style="margin-bottom: 0.5rem;">
+          <code>https://arnazon.com/signin</code>
+          <div class="quiz-buttons" style="margin-top: 0.5rem;">
+            <button class="btn btn-secondary" onclick="checkAnswer(this, false)">✅ 真实</button>
+            <button class="btn btn-secondary" onclick="checkAnswer(this, true)">❌ 钓鱼</button>
+          </div>
+        </div>
+        
+        <div class="card quiz-item" style="margin-bottom: 0.5rem;">
+          <code>https://login.microsoftonline.com</code>
+          <div class="quiz-buttons" style="margin-top: 0.5rem;">
+            <button class="btn btn-secondary" onclick="checkAnswer(this, true)">✅ 真实</button>
+            <button class="btn btn-secondary" onclick="checkAnswer(this, false)">❌ 钓鱼</button>
+          </div>
+        </div>
+        
+        <div class="card quiz-item" style="margin-bottom: 0.5rem;">
+          <code>https://microsoft-login.secure-verify.com</code>
+          <div class="quiz-buttons" style="margin-top: 0.5rem;">
+            <button class="btn btn-secondary" onclick="checkAnswer(this, false)">✅ 真实</button>
+            <button class="btn btn-secondary" onclick="checkAnswer(this, true)">❌ 钓鱼</button>
+          </div>
+        </div>
+        
+        <div class="card quiz-item" style="margin-bottom: 0.5rem;">
+          <code>https://www.g00gle.com/accounts</code>
+          <div class="quiz-buttons" style="margin-top: 0.5rem;">
+            <button class="btn btn-secondary" onclick="checkAnswer(this, false)">✅ 真实</button>
+            <button class="btn btn-secondary" onclick="checkAnswer(this, true)">❌ 钓鱼</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>🛡️ 防护建议</h2>
+      <ul style="margin-left: 1.5rem; line-height: 2;">
+        <li><strong>直接输入网址</strong> - 不要点击邮件/短信中的链接</li>
+        <li><strong>使用密码管理器</strong> - 只在正确域名自动填充</li>
+        <li><strong>启用双因素认证</strong> - 即使密码泄露也有保护</li>
+        <li><strong>保持警惕</strong> - 对紧急/恐吓信息保持怀疑</li>
+        <li><strong>检查发件人</strong> - 邮件地址可能被伪造</li>
+        <li><strong>使用安全软件</strong> - 浏览器和杀毒软件可以拦截已知钓鱼网站</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>📱 移动端更危险</h2>
+      <div class="warning-box">
+        <p>手机上更难识别钓鱼网站：</p>
+        <ul style="margin: 0.5rem 0 0 1.5rem;">
+          <li>地址栏很短，域名显示不完整</li>
+          <li>无法悬停查看链接地址</li>
+          <li>屏幕小，细节不易察觉</li>
+          <li>短信钓鱼（Smishing）更常见</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function checkAnswer(btn, isCorrect) {
+      const card = btn.closest('.quiz-item')
+      const buttons = card.querySelectorAll('button')
+      
+      buttons.forEach(b => b.disabled = true)
+      
+      if (isCorrect) {
+        card.style.borderColor = '#51cf66'
+        card.style.background = '#51cf6622'
+        btn.style.background = '#51cf66'
+        btn.style.color = '#fff'
+      } else {
+        card.style.borderColor = '#ff6b6b'
+        card.style.background = '#ff6b6b22'
+        btn.style.background = '#ff6b6b'
+        btn.style.color = '#fff'
+      }
+    }
+  </script>
+
+  <style>
+    .card {
+      background: #16213e;
+      border: 2px solid #0f3460;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+  </style>
+</body>
+</html>
