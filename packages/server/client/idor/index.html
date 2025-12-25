@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDOR Lab - 对象级越权</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔐 IDOR Lab</h1>
+      <p class="subtitle">对象级越权漏洞 (Insecure Direct Object Reference)</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ IDOR 是 OWASP Top 10 中最常见的漏洞之一！</strong>
+      <p>真实案例：某电商平台通过修改订单ID可查看任意用户订单，泄露数百万用户隐私。</p>
+    </div>
+
+    <section class="intro">
+      <h2>什么是 IDOR？</h2>
+      <p>IDOR 是指应用程序使用用户可控的输入（如 ID）直接访问对象，但没有验证用户是否有权访问该对象。</p>
+      
+      <pre><code>// 有漏洞的代码
+GET /api/order/1001  → 返回订单1001（不管是谁的）
+GET /api/order/1002  → 返回订单1002（不管是谁的）
+
+// 攻击者只需遍历 ID 就能获取所有订单！</code></pre>
+
+      <div class="types">
+        <div class="type-card">
+          <h3>水平越权</h3>
+          <p>访问同级别其他用户的数据</p>
+        </div>
+        <div class="type-card">
+          <h3>垂直越权</h3>
+          <p>普通用户访问管理员数据</p>
+        </div>
+        <div class="type-card">
+          <h3>功能越权</h3>
+          <p>执行无权限的操作</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="labs">
+      <h2>📚 实验列表</h2>
+      
+      <a href="order.html" class="lab-card">
+        <div class="lab-icon">📦</div>
+        <div class="lab-info">
+          <h3>查看他人订单</h3>
+          <p>通过修改订单ID查看其他用户的订单详情</p>
+          <span class="difficulty hard">高危</span>
+        </div>
+      </a>
+
+      <a href="profile.html" class="lab-card">
+        <div class="lab-icon">👤</div>
+        <div class="lab-info">
+          <h3>修改他人资料</h3>
+          <p>通过修改用户ID篡改其他用户的个人信息</p>
+          <span class="difficulty hard">高危</span>
+        </div>
+      </a>
+
+      <a href="file.html" class="lab-card">
+        <div class="lab-icon">📁</div>
+        <div class="lab-info">
+          <h3>删除他人文件</h3>
+          <p>通过修改文件ID删除其他用户的私密文件</p>
+          <span class="difficulty hard">高危</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>👤 测试用户</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr><th>ID</th><th>用户名</th><th>角色</th><th>拥有的资源</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>zhangsan</td><td>普通用户</td><td>订单1001,1002 | 文件doc_001,doc_002</td></tr>
+          <tr><td>2</td><td>lisi</td><td>普通用户</td><td>订单1003,1004 | 文件doc_003</td></tr>
+          <tr><td>3</td><td>admin</td><td>管理员</td><td>文件doc_004</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="defense">
+      <h2>🛡️ 防御方案</h2>
+      <ul>
+        <li><strong>对象级权限校验</strong> - 每次访问都验证资源归属</li>
+        <li><strong>使用 UUID</strong> - 避免可预测的自增 ID</li>
+        <li><strong>间接引用</strong> - 使用映射表而非直接 ID</li>
+        <li><strong>访问控制列表</strong> - 明确定义谁能访问什么</li>
+      </ul>
+    </section>
+
+    <p style="margin-top: 2rem; text-align: center;">
+      <a href="/" style="color: #e94560;">← 返回首页</a>
+    </p>
+  </div>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

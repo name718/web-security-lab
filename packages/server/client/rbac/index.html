@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RBAC Lab - 权限模型缺陷</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>👑 RBAC Lab</h1>
+      <p class="subtitle">权限模型设计缺陷</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ 权限问题不只是"没校验"，更多是"设计错了"！</strong>
+      <p>角色混乱 → 权限继承错误 → 管理接口暴露</p>
+    </div>
+
+    <section class="intro">
+      <h2>什么是 RBAC？</h2>
+      <p>RBAC (Role-Based Access Control) 基于角色的访问控制，是最常用的权限模型。</p>
+      
+      <pre><code>用户 → 角色 → 权限
+
+用户: zhangsan
+角色: editor
+权限: [read:public, read:own, write:own, write:content]</code></pre>
+
+      <div class="types">
+        <div class="type-card">
+          <h3>前端校验绕过</h3>
+          <p>只在前端隐藏按钮，后端不校验</p>
+        </div>
+        <div class="type-card">
+          <h3>角色参数可控</h3>
+          <p>从请求参数获取角色而非 session</p>
+        </div>
+        <div class="type-card">
+          <h3>权限继承错误</h3>
+          <p>错误的权限判断逻辑</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="labs">
+      <h2>📚 实验列表</h2>
+      
+      <a href="frontend-bypass.html" class="lab-card">
+        <div class="lab-icon">🎭</div>
+        <div class="lab-info">
+          <h3>前端校验绕过</h3>
+          <p>绕过前端隐藏的管理功能，直接调用后端接口</p>
+          <span class="difficulty medium">中危</span>
+        </div>
+      </a>
+
+      <a href="role-forge.html" class="lab-card">
+        <div class="lab-icon">🔑</div>
+        <div class="lab-info">
+          <h3>角色伪造</h3>
+          <p>通过修改请求参数伪造管理员角色</p>
+          <span class="difficulty hard">高危</span>
+        </div>
+      </a>
+
+      <a href="permission-inherit.html" class="lab-card">
+        <div class="lab-icon">🔗</div>
+        <div class="lab-info">
+          <h3>权限继承错误</h3>
+          <p>利用错误的权限判断逻辑获取越权访问</p>
+          <span class="difficulty hard">高危</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>👤 角色权限表</h2>
+      <div id="roleTable">加载中...</div>
+    </section>
+
+    <section>
+      <h2>👥 测试用户</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr><th>ID</th><th>用户名</th><th>角色</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>guest_user</td><td>guest (游客)</td></tr>
+          <tr><td>2</td><td>normal_user</td><td>user (普通用户)</td></tr>
+          <tr><td>3</td><td>editor_user</td><td>editor (编辑)</td></tr>
+          <tr><td>4</td><td>admin_user</td><td>admin (管理员)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="defense">
+      <h2>🛡️ 安全设计原则</h2>
+      <ul>
+        <li><strong>后端校验</strong> - 永远不要只依赖前端</li>
+        <li><strong>最小权限</strong> - 只给必要的权限</li>
+        <li><strong>角色分离</strong> - 管理员和普通用户严格区分</li>
+        <li><strong>审计日志</strong> - 记录所有敏感操作</li>
+        <li><strong>定期审查</strong> - 检查权限配置是否合理</li>
+      </ul>
+    </section>
+
+    <p style="margin-top: 2rem; text-align: center;">
+      <a href="/" style="color: #e94560;">← 返回首页</a>
+    </p>
+  </div>
+
+  <script>
+    loadRoles()
+
+    async function loadRoles() {
+      const res = await fetch('/api/rbac/roles')
+      const roles = await res.json()
+      
+      document.getElementById('roleTable').innerHTML = `
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr><th>角色</th><th>名称</th><th>权限</th></tr>
+          </thead>
+          <tbody>
+            ${Object.entries(roles).map(([key, role]) => `
+              <tr>
+                <td><code>${key}</code></td>
+                <td>${role.name}</td>
+                <td><code>${role.permissions.join(', ')}</code></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `
+    }
+  </script>
+
+  <style>
+    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #0f3460; }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

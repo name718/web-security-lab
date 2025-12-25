@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RBAC - 权限继承错误</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 RBAC Lab</a>
+    </nav>
+
+    <header>
+      <h1>🔗 权限继承错误</h1>
+      <p class="subtitle">Permission Inheritance Flaw</p>
+    </header>
+
+    <section>
+      <h2>👤 当前用户</h2>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="login(1)">游客</button>
+        <button class="btn btn-secondary" onclick="login(2)">普通用户</button>
+        <button class="btn btn-secondary" onclick="login(3)">编辑</button>
+        <button class="btn btn-secondary" onclick="login(4)">管理员</button>
+        <button class="btn btn-secondary" onclick="logout()">退出</button>
+      </div>
+      <div id="currentUser" class="token-display" style="margin-top: 0.5rem;">未登录</div>
+      <div id="userPermissions" style="margin-top: 0.5rem; color: #888;"></div>
+    </section>
+
+    <section>
+      <h2>📖 漏洞说明</h2>
+      <div class="warning-box">
+        <p>权限判断逻辑错误，导致低权限用户获得高权限访问。</p>
+        <p>常见错误：使用 includes() 或模糊匹配判断权限。</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 权限校验测试</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked> 
+          ❌ 有漏洞校验
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe"> 
+          ✅ 安全校验
+        </label>
+      </div>
+
+      <div style="margin: 1rem 0;">
+        <label>请求的权限:</label>
+        <select id="requiredPermission">
+          <option value="read:public">read:public (公开读取)</option>
+          <option value="read:own">read:own (读取自己的)</option>
+          <option value="write:own">write:own (写入自己的)</option>
+          <option value="read:all">read:all (读取所有)</option>
+          <option value="write:all">write:all (写入所有)</option>
+          <option value="delete:all">delete:all (删除所有)</option>
+          <option value="manage:users">manage:users (管理用户)</option>
+        </select>
+        <button class="btn" onclick="checkPermission()">校验权限</button>
+      </div>
+
+      <div class="info-box">
+        <p>💡 以"编辑"角色登录，尝试请求 <code>delete:all</code> 权限。</p>
+        <p>编辑只有 <code>write:content</code>，但有漏洞的校验会通过！</p>
+      </div>
+
+      <div id="checkResult" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码</h2>
+      <pre><code>// ❌ 有漏洞：模糊匹配
+function hasPermission(userPermissions, required) {
+  return userPermissions.some(p => 
+    p.includes('write') ||  // 有任何 write 权限就通过
+    required.includes(p.split(':')[1])  // 模糊匹配
+  )
+}
+
+// 编辑有 write:content
+// 请求 delete:all
+// 因为 write:content 包含 'write'，所以通过！
+
+// ✅ 安全：精确匹配
+function hasPermission(userPermissions, required) {
+  return userPermissions.includes(required)
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>📊 权限矩阵</h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <thead>
+          <tr>
+            <th>角色</th>
+            <th>read:public</th>
+            <th>read:own</th>
+            <th>write:own</th>
+            <th>write:content</th>
+            <th>read:all</th>
+            <th>write:all</th>
+            <th>delete:all</th>
+            <th>manage:users</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>guest</td>
+            <td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td>
+          </tr>
+          <tr>
+            <td>user</td>
+            <td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td>
+          </tr>
+          <tr>
+            <td>editor</td>
+            <td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td>
+          </tr>
+          <tr>
+            <td>admin</td>
+            <td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    let currentUser = null
+
+    async function login(userId) {
+      const res = await fetch('/api/rbac/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+      const data = await res.json()
+      if (data.success) {
+        currentUser = data.user
+        document.getElementById('currentUser').innerHTML = 
+          `✅ 已登录: <strong>${currentUser.username}</strong> (角色: ${currentUser.role})`
+        document.getElementById('userPermissions').innerHTML = 
+          `权限: <code>${data.permissions.join(', ')}</code>`
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/rbac/logout', { method: 'POST' })
+      currentUser = null
+      document.getElementById('currentUser').textContent = '未登录'
+      document.getElementById('userPermissions').textContent = ''
+    }
+
+    async function checkPermission() {
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const requiredPermission = document.getElementById('requiredPermission').value
+
+      const res = await fetch(`/api/rbac/permission/check/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requiredPermission })
+      })
+      const data = await res.json()
+
+      const resultEl = document.getElementById('checkResult')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="${data.vulnerability ? 'warning-box' : 'success-box'}">
+            ${data.vulnerability ? `<strong>🚨 ${data.vulnerability}</strong><br><br>` : ''}
+            <strong>权限校验通过!</strong>
+            <p>请求权限: ${data.requiredPermission}</p>
+            <p>用户权限: ${data.userPermissions.join(', ')}</p>
+          </div>
+        `
+      } else {
+        resultEl.innerHTML = `
+          <div class="success-box">
+            <strong>✅ 权限校验拒绝</strong>
+            <p>${data.message}</p>
+            <p>请求权限: ${data.requiredPermission}</p>
+            <p>用户权限: ${data.userPermissions?.join(', ') || '无'}</p>
+          </div>
+        `
+      }
+    }
+  </script>
+
+  <style>
+    th, td { padding: 0.5rem; text-align: center; border: 1px solid #0f3460; }
+    th { background: #0f3460; }
+    td:first-child { text-align: left; font-weight: bold; }
+  </style>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RBAC - 角色伪造</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 RBAC Lab</a>
+    </nav>
+
+    <header>
+      <h1>🔑 角色伪造</h1>
+      <p class="subtitle">Role Parameter Tampering</p>
+    </header>
+
+    <section>
+      <h2>👤 当前用户</h2>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="login(2)">登录普通用户</button>
+        <button class="btn btn-secondary" onclick="logout()">退出</button>
+      </div>
+      <div id="currentUser" class="token-display" style="margin-top: 0.5rem;">未登录</div>
+    </section>
+
+    <section>
+      <h2>📖 漏洞说明</h2>
+      <div class="warning-box">
+        <p>有些系统从请求参数中获取用户角色，而不是从服务端 session 获取。</p>
+        <p>攻击者可以修改请求参数，伪造成管理员角色！</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 角色伪造攻击</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked> 
+          ❌ 有漏洞接口
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe"> 
+          ✅ 安全接口
+        </label>
+      </div>
+
+      <div style="margin: 1rem 0; max-width: 400px;">
+        <div style="margin-bottom: 0.5rem;">
+          <label>操作:</label>
+          <input type="text" id="action" value="删除所有用户" placeholder="要执行的操作">
+        </div>
+        <div style="margin-bottom: 0.5rem;">
+          <label>伪造角色:</label>
+          <select id="forgeRole">
+            <option value="">不伪造（使用真实角色）</option>
+            <option value="admin">admin (管理员)</option>
+            <option value="editor">editor (编辑)</option>
+          </select>
+        </div>
+        <button class="btn" onclick="executeAction()">执行敏感操作</button>
+      </div>
+
+      <div class="info-box">
+        <p>💡 以普通用户登录，然后选择伪造角色为 admin，观察是否能执行管理员操作。</p>
+      </div>
+
+      <div id="actionResult" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码</h2>
+      <pre><code>// ❌ 有漏洞：从请求参数获取角色
+router.post('/action', (req, res) => {
+  const { action, role } = req.body
+  
+  // 信任客户端传来的 role
+  const userRole = role || currentUser.role
+  
+  if (hasPermission(userRole, 'manage:users')) {
+    // 执行敏感操作
+  }
+})
+
+// ✅ 安全：从 session 获取角色
+router.post('/action', (req, res) => {
+  const { action } = req.body
+  
+  // 忽略客户端传的 role，从 session 获取
+  const userRole = currentUser.role
+  
+  if (hasPermission(userRole, 'manage:users')) {
+    // 执行敏感操作
+  }
+})</code></pre>
+    </section>
+
+    <section>
+      <h2>🔍 请求对比</h2>
+      <pre><code>// 正常请求
+POST /api/action
+{ "action": "删除用户" }
+
+// 攻击请求（伪造角色）
+POST /api/action
+{ "action": "删除用户", "role": "admin" }  ← 添加 role 参数</code></pre>
+    </section>
+  </div>
+
+  <script>
+    let currentUser = null
+
+    async function login(userId) {
+      const res = await fetch('/api/rbac/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+      const data = await res.json()
+      if (data.success) {
+        currentUser = data.user
+        document.getElementById('currentUser').innerHTML = 
+          `✅ 已登录: <strong>${currentUser.username}</strong> (真实角色: ${currentUser.role})`
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/rbac/logout', { method: 'POST' })
+      currentUser = null
+      document.getElementById('currentUser').textContent = '未登录'
+    }
+
+    async function executeAction() {
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const action = document.getElementById('action').value
+      const forgeRole = document.getElementById('forgeRole').value
+
+      const body = { action }
+      if (forgeRole) {
+        body.role = forgeRole  // 伪造角色
+      }
+
+      const res = await fetch(`/api/rbac/action/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      const data = await res.json()
+
+      const resultEl = document.getElementById('actionResult')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="${data.vulnerability ? 'warning-box' : 'success-box'}">
+            ${data.vulnerability ? `<strong>🚨 ${data.vulnerability}</strong><br><br>` : ''}
+            <strong>操作执行成功!</strong>
+            <p>${data.message}</p>
+            ${data.usedRole ? `<p>使用的角色: ${data.usedRole}</p>` : ''}
+          </div>
+        `
+      } else {
+        resultEl.innerHTML = `<div class="success-box">✅ ${data.message}</div>`
+      }
+    }
+  </script>
+</body>
+</html>

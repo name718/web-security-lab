@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDOR - 查看他人订单</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 IDOR Lab</a>
+    </nav>
+
+    <header>
+      <h1>📦 查看他人订单</h1>
+      <p class="subtitle">Order IDOR Vulnerability</p>
+    </header>
+
+    <section>
+      <h2>👤 当前用户</h2>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="login(1)">登录 zhangsan (ID:1)</button>
+        <button class="btn btn-secondary" onclick="login(2)">登录 lisi (ID:2)</button>
+        <button class="btn btn-secondary" onclick="logout()">退出</button>
+      </div>
+      <div id="currentUser" class="token-display" style="margin-top: 0.5rem;">未登录</div>
+    </section>
+
+    <section>
+      <h2>📋 所有订单</h2>
+      <div id="orderList">加载中...</div>
+    </section>
+
+    <section>
+      <h2>🧪 IDOR 攻击演示</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked> 
+          ❌ 有漏洞接口
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe"> 
+          ✅ 安全接口
+        </label>
+      </div>
+
+      <div style="margin: 1rem 0;">
+        <label>输入订单ID:</label>
+        <input type="text" id="orderId" placeholder="如: 1001, 1002, 1003, 1004" style="width: 200px;">
+        <button class="btn" onclick="viewOrder()">查看订单</button>
+      </div>
+
+      <div class="warning-box">
+        <strong>💡 攻击方式:</strong>
+        <p>1. 以 zhangsan 登录（只有订单 1001, 1002）</p>
+        <p>2. 尝试访问 lisi 的订单 1003 或 1004</p>
+        <p>3. 观察是否能看到他人订单详情</p>
+      </div>
+
+      <div id="orderResult" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码</h2>
+      <pre><code>// ❌ 有漏洞：不校验订单归属
+router.get('/order/:id', (req, res) => {
+  const order = orders[req.params.id]
+  res.json(order)  // 直接返回，不管是谁的订单
+})
+
+// ✅ 安全：校验订单归属
+router.get('/order/:id', (req, res) => {
+  const order = orders[req.params.id]
+  
+  if (order.userId !== currentUser.id) {
+    return res.status(403).json({ error: '无权访问' })
+  }
+  
+  res.json(order)
+})</code></pre>
+    </section>
+  </div>
+
+  <script>
+    let currentUser = null
+    loadOrders()
+
+    async function login(userId) {
+      const res = await fetch('/api/idor/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+      const data = await res.json()
+      if (data.success) {
+        currentUser = data.user
+        document.getElementById('currentUser').innerHTML = 
+          `✅ 已登录: <strong>${currentUser.username}</strong> (ID: ${currentUser.id}, 角色: ${currentUser.role})`
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/idor/logout', { method: 'POST' })
+      currentUser = null
+      document.getElementById('currentUser').textContent = '未登录'
+    }
+
+    async function loadOrders() {
+      const res = await fetch('/api/idor/orders')
+      const orders = await res.json()
+      
+      document.getElementById('orderList').innerHTML = `
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr><th>订单ID</th><th>所属用户</th><th>商品</th><th>金额</th><th>状态</th></tr>
+          </thead>
+          <tbody>
+            ${orders.map(o => `
+              <tr>
+                <td>${o.id}</td>
+                <td>用户${o.userId}</td>
+                <td>${o.product}</td>
+                <td>¥${o.amount}</td>
+                <td>${o.status}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `
+    }
+
+    async function viewOrder() {
+      const orderId = document.getElementById('orderId').value
+      if (!orderId) {
+        alert('请输入订单ID')
+        return
+      }
+
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const res = await fetch(`/api/idor/order/${mode}/${orderId}`)
+      const data = await res.json()
+
+      const resultEl = document.getElementById('orderResult')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="${data.vulnerability ? 'warning-box' : 'success-box'}">
+            ${data.vulnerability ? `<strong>🚨 ${data.vulnerability}</strong><br><br>` : ''}
+            <strong>订单详情:</strong>
+            <p>订单ID: ${data.order.id}</p>
+            <p>所属用户: 用户${data.order.userId}</p>
+            <p>商品: ${data.order.product}</p>
+            <p>金额: ¥${data.order.amount}</p>
+            <p>状态: ${data.order.status}</p>
+            <p>地址: ${data.order.address}</p>
+          </div>
+        `
+      } else {
+        resultEl.innerHTML = `<div class="success-box">✅ ${data.message}</div>`
+      }
+    }
+  </script>
+
+  <style>
+    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #0f3460; }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

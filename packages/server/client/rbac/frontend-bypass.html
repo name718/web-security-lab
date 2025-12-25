@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RBAC - 前端校验绕过</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 RBAC Lab</a>
+    </nav>
+
+    <header>
+      <h1>🎭 前端校验绕过</h1>
+      <p class="subtitle">Frontend Validation Bypass</p>
+    </header>
+
+    <section>
+      <h2>👤 当前用户</h2>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="login(1)">游客</button>
+        <button class="btn btn-secondary" onclick="login(2)">普通用户</button>
+        <button class="btn btn-secondary" onclick="login(3)">编辑</button>
+        <button class="btn btn-secondary" onclick="login(4)">管理员</button>
+        <button class="btn btn-secondary" onclick="logout()">退出</button>
+      </div>
+      <div id="currentUser" class="token-display" style="margin-top: 0.5rem;">未登录</div>
+    </section>
+
+    <section>
+      <h2>📖 漏洞说明</h2>
+      <div class="warning-box">
+        <p>很多开发者只在前端隐藏管理功能，认为用户看不到就安全了。</p>
+        <p>但攻击者可以直接调用后端 API！</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🖥️ 模拟前端界面</h2>
+      <p>根据角色显示不同的功能按钮：</p>
+      
+      <div id="frontendUI" style="background: #0f3460; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+        <p style="color: #888;">请先登录查看界面</p>
+      </div>
+
+      <div class="info-box">
+        <p>💡 注意：非管理员看不到"管理日志"按钮，但可以直接调用 API！</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 绕过攻击</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked> 
+          ❌ 有漏洞接口
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe"> 
+          ✅ 安全接口
+        </label>
+      </div>
+
+      <p style="margin-top: 1rem;">直接调用管理员接口（绕过前端）：</p>
+      <button class="btn" onclick="accessAdminLogs()">📋 获取管理日志</button>
+      <button class="btn" onclick="accessSystemConfig()">⚙️ 获取系统配置</button>
+
+      <div id="bypassResult" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码</h2>
+      <pre><code>// 前端代码（只隐藏按钮）
+{currentUser.role === 'admin' && (
+  &lt;button onClick={getAdminLogs}&gt;管理日志&lt;/button&gt;
+)}
+
+// ❌ 后端没有校验
+router.get('/admin/logs', (req, res) => {
+  res.json(adminLogs)  // 直接返回，不校验权限
+})
+
+// ✅ 后端必须校验
+router.get('/admin/logs', (req, res) => {
+  if (currentUser.role !== 'admin') {
+    return res.status(403).json({ error: '权限不足' })
+  }
+  res.json(adminLogs)
+})</code></pre>
+    </section>
+  </div>
+
+  <script>
+    let currentUser = null
+
+    async function login(userId) {
+      const res = await fetch('/api/rbac/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+      const data = await res.json()
+      if (data.success) {
+        currentUser = data.user
+        document.getElementById('currentUser').innerHTML = 
+          `✅ 已登录: <strong>${currentUser.username}</strong> (角色: ${currentUser.role})`
+        updateFrontendUI()
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/rbac/logout', { method: 'POST' })
+      currentUser = null
+      document.getElementById('currentUser').textContent = '未登录'
+      document.getElementById('frontendUI').innerHTML = '<p style="color: #888;">请先登录查看界面</p>'
+    }
+
+    function updateFrontendUI() {
+      let html = '<p>可用功能：</p><div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">'
+      
+      // 所有人都能看到的
+      html += '<button class="btn btn-secondary">📖 查看公开内容</button>'
+      
+      // user 及以上
+      if (['user', 'editor', 'admin'].includes(currentUser.role)) {
+        html += '<button class="btn btn-secondary">👤 我的资料</button>'
+      }
+      
+      // editor 及以上
+      if (['editor', 'admin'].includes(currentUser.role)) {
+        html += '<button class="btn btn-secondary">✏️ 编辑内容</button>'
+      }
+      
+      // 只有 admin
+      if (currentUser.role === 'admin') {
+        html += '<button class="btn" style="background: #e94560;">📋 管理日志</button>'
+        html += '<button class="btn" style="background: #e94560;">⚙️ 系统配置</button>'
+      }
+      
+      html += '</div>'
+      
+      if (currentUser.role !== 'admin') {
+        html += '<p style="color: #888; margin-top: 1rem;">（管理功能已隐藏，但你可以直接调用 API...）</p>'
+      }
+      
+      document.getElementById('frontendUI').innerHTML = html
+    }
+
+    async function accessAdminLogs() {
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const res = await fetch(`/api/rbac/admin/logs/${mode}`)
+      const data = await res.json()
+
+      const resultEl = document.getElementById('bypassResult')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="${data.vulnerability ? 'warning-box' : 'success-box'}">
+            ${data.vulnerability ? `<strong>🚨 ${data.vulnerability}</strong><br><br>` : ''}
+            <strong>管理日志:</strong>
+            <pre>${JSON.stringify(data.logs, null, 2)}</pre>
+          </div>
+        `
+      } else {
+        resultEl.innerHTML = `<div class="success-box">✅ ${data.message}</div>`
+      }
+    }
+
+    async function accessSystemConfig() {
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const res = await fetch(`/api/rbac/system/config/${mode}`)
+      const data = await res.json()
+
+      const resultEl = document.getElementById('bypassResult')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="warning-box">
+            ${data.vulnerability ? `<strong>🚨 ${data.vulnerability}</strong><br><br>` : ''}
+            <strong>系统配置（敏感！）:</strong>
+            <pre>${JSON.stringify(data.config, null, 2)}</pre>
+          </div>
+        `
+      } else {
+        resultEl.innerHTML = `<div class="success-box">✅ ${data.message}</div>`
+      }
+    }
+  </script>
+</body>
+</html>

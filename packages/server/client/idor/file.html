@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDOR - 删除他人文件</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 IDOR Lab</a>
+    </nav>
+
+    <header>
+      <h1>📁 删除他人文件</h1>
+      <p class="subtitle">File IDOR Vulnerability</p>
+    </header>
+
+    <section>
+      <h2>👤 当前用户</h2>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="login(1)">登录 zhangsan (ID:1)</button>
+        <button class="btn btn-secondary" onclick="login(2)">登录 lisi (ID:2)</button>
+        <button class="btn btn-secondary" onclick="logout()">退出</button>
+        <button class="btn btn-secondary" onclick="resetData()">重置数据</button>
+      </div>
+      <div id="currentUser" class="token-display" style="margin-top: 0.5rem;">未登录</div>
+    </section>
+
+    <section>
+      <h2>📋 所有文件</h2>
+      <div id="fileList">加载中...</div>
+    </section>
+
+    <section>
+      <h2>🧪 IDOR 攻击演示</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked> 
+          ❌ 有漏洞接口
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe"> 
+          ✅ 安全接口
+        </label>
+      </div>
+
+      <div style="margin: 1rem 0;">
+        <label>输入文件ID:</label>
+        <input type="text" id="fileId" placeholder="如: doc_001, doc_003, doc_004" style="width: 200px;">
+        <button class="btn" style="background: #ff6b6b;" onclick="deleteFile()">🗑️ 删除文件</button>
+      </div>
+
+      <div class="warning-box">
+        <strong>💡 攻击方式:</strong>
+        <p>1. 以 zhangsan (ID:1) 登录</p>
+        <p>2. 尝试删除 lisi 的文件 doc_003</p>
+        <p>3. 或删除 admin 的机密文件 doc_004</p>
+        <p>4. 观察文件是否被删除</p>
+      </div>
+
+      <div id="deleteResult" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码</h2>
+      <pre><code>// ❌ 有漏洞：不校验文件归属
+router.delete('/file/:id', (req, res) => {
+  delete files[req.params.id]  // 直接删除
+  res.json({ success: true })
+})
+
+// ✅ 安全：校验文件归属
+router.delete('/file/:id', (req, res) => {
+  const file = files[req.params.id]
+  
+  if (file.userId !== currentUser.id) {
+    return res.status(403).json({ error: '无权删除' })
+  }
+  
+  delete files[req.params.id]
+  res.json({ success: true })
+})</code></pre>
+    </section>
+
+    <section>
+      <h2>💥 真实案例</h2>
+      <div class="info-box">
+        <p><strong>某云存储平台 IDOR 漏洞：</strong></p>
+        <p>攻击者通过遍历文件ID，删除了数千名用户的私密文件，造成严重数据丢失。</p>
+        <p style="margin-top: 0.5rem;"><strong>修复方案：</strong>使用 UUID 替代自增ID，并在每次操作时校验文件归属。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let currentUser = null
+    loadFiles()
+
+    async function login(userId) {
+      const res = await fetch('/api/idor/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+      const data = await res.json()
+      if (data.success) {
+        currentUser = data.user
+        document.getElementById('currentUser').innerHTML = 
+          `✅ 已登录: <strong>${currentUser.username}</strong> (ID: ${currentUser.id})`
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/idor/logout', { method: 'POST' })
+      currentUser = null
+      document.getElementById('currentUser').textContent = '未登录'
+    }
+
+    async function loadFiles() {
+      const res = await fetch('/api/idor/files')
+      const files = await res.json()
+      
+      document.getElementById('fileList').innerHTML = `
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr><th>文件ID</th><th>所属用户</th><th>文件名</th><th>内容预览</th></tr>
+          </thead>
+          <tbody>
+            ${files.map(f => `
+              <tr>
+                <td><code>${f.id}</code></td>
+                <td>用户${f.userId}</td>
+                <td>${f.name}</td>
+                <td style="color: #888;">${f.content.substring(0, 30)}...</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `
+    }
+
+    async function deleteFile() {
+      const fileId = document.getElementById('fileId').value
+      if (!fileId) {
+        alert('请输入文件ID')
+        return
+      }
+
+      if (!confirm(`确定要删除文件 ${fileId} 吗？`)) return
+
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const res = await fetch(`/api/idor/file/${mode}/${fileId}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+
+      const resultEl = document.getElementById('deleteResult')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="${data.vulnerability ? 'warning-box' : 'success-box'}">
+            ${data.vulnerability ? `<strong>🚨 ${data.vulnerability}</strong><br><br>` : ''}
+            <strong>删除成功!</strong>
+            <p>被删除的文件: ${data.deletedFile.name}</p>
+            <p>文件内容: ${data.deletedFile.content}</p>
+          </div>
+        `
+        loadFiles()
+      } else {
+        resultEl.innerHTML = `<div class="success-box">✅ ${data.message}</div>`
+      }
+    }
+
+    async function resetData() {
+      await fetch('/api/idor/reset', { method: 'POST' })
+      loadFiles()
+      document.getElementById('deleteResult').innerHTML = '<div class="info-box">数据已重置</div>'
+    }
+  </script>
+
+  <style>
+    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #0f3460; }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

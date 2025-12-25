@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDOR - 修改他人资料</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 IDOR Lab</a>
+    </nav>
+
+    <header>
+      <h1>👤 修改他人资料</h1>
+      <p class="subtitle">Profile IDOR Vulnerability</p>
+    </header>
+
+    <section>
+      <h2>👤 当前用户</h2>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="login(1)">登录 zhangsan (ID:1)</button>
+        <button class="btn btn-secondary" onclick="login(2)">登录 lisi (ID:2)</button>
+        <button class="btn btn-secondary" onclick="logout()">退出</button>
+        <button class="btn btn-secondary" onclick="resetData()">重置数据</button>
+      </div>
+      <div id="currentUser" class="token-display" style="margin-top: 0.5rem;">未登录</div>
+    </section>
+
+    <section>
+      <h2>📋 所有用户资料</h2>
+      <div id="userList">加载中...</div>
+    </section>
+
+    <section>
+      <h2>🧪 IDOR 攻击演示</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked> 
+          ❌ 有漏洞接口
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe"> 
+          ✅ 安全接口
+        </label>
+      </div>
+
+      <div style="margin: 1rem 0; max-width: 400px;">
+        <div style="margin-bottom: 0.5rem;">
+          <label>目标用户ID:</label>
+          <input type="number" id="targetUserId" placeholder="1, 2, 或 3" style="width: 100px;">
+        </div>
+        <div style="margin-bottom: 0.5rem;">
+          <label>新邮箱:</label>
+          <input type="email" id="newEmail" placeholder="hacked@evil.com">
+        </div>
+        <div style="margin-bottom: 0.5rem;">
+          <label>新手机:</label>
+          <input type="text" id="newPhone" placeholder="666****6666">
+        </div>
+        <button class="btn" onclick="updateProfile()">修改资料</button>
+      </div>
+
+      <div class="warning-box">
+        <strong>💡 攻击方式:</strong>
+        <p>1. 以 zhangsan (ID:1) 登录</p>
+        <p>2. 将目标用户ID改为 2 (lisi)</p>
+        <p>3. 修改 lisi 的邮箱和手机</p>
+        <p>4. 观察 lisi 的资料是否被篡改</p>
+      </div>
+
+      <div id="updateResult" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码</h2>
+      <pre><code>// ❌ 有漏洞：信任客户端传来的 userId
+router.put('/profile', (req, res) => {
+  const { userId, email, phone } = req.body
+  users[userId].email = email  // 直接修改，不校验
+})
+
+// ✅ 安全：只能修改自己的资料
+router.put('/profile', (req, res) => {
+  const { email, phone } = req.body
+  // 从 session 获取当前用户，忽略客户端传的 userId
+  users[currentUser.id].email = email
+})</code></pre>
+    </section>
+  </div>
+
+  <script>
+    let currentUser = null
+    loadUsers()
+
+    async function login(userId) {
+      const res = await fetch('/api/idor/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+      const data = await res.json()
+      if (data.success) {
+        currentUser = data.user
+        document.getElementById('currentUser').innerHTML = 
+          `✅ 已登录: <strong>${currentUser.username}</strong> (ID: ${currentUser.id})`
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/idor/logout', { method: 'POST' })
+      currentUser = null
+      document.getElementById('currentUser').textContent = '未登录'
+    }
+
+    async function loadUsers() {
+      const res = await fetch('/api/idor/users')
+      const users = await res.json()
+      
+      document.getElementById('userList').innerHTML = `
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr><th>ID</th><th>用户名</th><th>邮箱</th><th>手机</th><th>角色</th></tr>
+          </thead>
+          <tbody>
+            ${users.map(u => `
+              <tr>
+                <td>${u.id}</td>
+                <td>${u.username}</td>
+                <td>${u.email}</td>
+                <td>${u.phone}</td>
+                <td>${u.role}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `
+    }
+
+    async function updateProfile() {
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const userId = parseInt(document.getElementById('targetUserId').value)
+      const email = document.getElementById('newEmail').value
+      const phone = document.getElementById('newPhone').value
+
+      if (!userId) {
+        alert('请输入目标用户ID')
+        return
+      }
+
+      const res = await fetch(`/api/idor/profile/${mode}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, email, phone })
+      })
+      const data = await res.json()
+
+      const resultEl = document.getElementById('updateResult')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="${data.vulnerability ? 'warning-box' : 'success-box'}">
+            ${data.vulnerability ? `<strong>🚨 ${data.vulnerability}</strong><br><br>` : ''}
+            <strong>修改成功!</strong>
+            <p>旧数据: ${JSON.stringify(data.oldData)}</p>
+            <p>新数据: ${JSON.stringify(data.newData)}</p>
+          </div>
+        `
+        loadUsers()
+      } else {
+        resultEl.innerHTML = `<div class="success-box">✅ ${data.message}</div>`
+      }
+    }
+
+    async function resetData() {
+      await fetch('/api/idor/reset', { method: 'POST' })
+      loadUsers()
+      document.getElementById('updateResult').innerHTML = '<div class="info-box">数据已重置</div>'
+    }
+  </script>
+
+  <style>
+    th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #0f3460; }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>
