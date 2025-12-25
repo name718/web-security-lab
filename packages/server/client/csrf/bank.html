@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验一：模拟银行系统</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 CSRF Lab</a>
+    </nav>
+
+    <header>
+      <h1>🏦 安全银行</h1>
+      <p class="subtitle">Secure Bank (模拟)</p>
+    </header>
+
+    <!-- 未登录状态 -->
+    <section id="loginSection">
+      <h2>🔐 用户登录</h2>
+      <div style="max-width: 300px;">
+        <div style="margin-bottom: 1rem;">
+          <label>用户名:</label>
+          <input type="text" id="username" value="victim">
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label>密码:</label>
+          <input type="password" id="password" value="123456">
+        </div>
+        <button class="btn" onclick="login()">登录</button>
+      </div>
+      <div class="info-box" style="margin-top: 1rem;">
+        <p>测试账号: victim / 123456</p>
+      </div>
+    </section>
+
+    <!-- 已登录状态 -->
+    <section id="bankSection" style="display: none;">
+      <h2>👤 账户信息</h2>
+      <div class="token-display">
+        <p>用户: <strong id="displayUsername"></strong></p>
+        <p>余额: <strong id="displayBalance" style="color: #51cf66; font-size: 1.5rem;"></strong></p>
+      </div>
+      <button class="btn btn-secondary" onclick="logout()" style="margin-top: 1rem;">退出登录</button>
+    </section>
+
+    <section id="transferSection" style="display: none;">
+      <h2>💸 转账</h2>
+      
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="mode" value="unsafe" checked> 
+          ❌ 无 CSRF 防护
+        </label>
+        <label>
+          <input type="radio" name="mode" value="safe"> 
+          ✅ 有 CSRF Token 防护
+        </label>
+      </div>
+
+      <div style="max-width: 300px; margin-top: 1rem;">
+        <div style="margin-bottom: 1rem;">
+          <label>收款人:</label>
+          <input type="text" id="toUser" value="hacker">
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label>金额:</label>
+          <input type="number" id="amount" value="100">
+        </div>
+        <button class="btn" onclick="transfer()">确认转账</button>
+      </div>
+
+      <div id="transferResult" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section id="logsSection" style="display: none;">
+      <h2>📋 转账记录</h2>
+      <button class="btn btn-secondary" onclick="loadLogs()">刷新</button>
+      <button class="btn btn-secondary" onclick="resetData()">重置数据</button>
+      <div id="logsList" style="margin-top: 1rem;"></div>
+    </section>
+
+    <section>
+      <h2>⚠️ 实验说明</h2>
+      <div class="warning-box">
+        <p>1. 先在此页面登录 victim 账户</p>
+        <p>2. <strong>保持此页面打开（保持登录状态）</strong></p>
+        <p>3. 新开标签页访问 <a href="attack.html" style="color: #e94560;">攻击者页面</a></p>
+        <p>4. 观察 victim 的余额变化</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let sessionId = localStorage.getItem('csrf_session')
+    let csrfToken = localStorage.getItem('csrf_token')
+
+    // 页面加载时检查登录状态
+    checkLogin()
+
+    async function checkLogin() {
+      if (!sessionId) {
+        showLoginSection()
+        return
+      }
+
+      const res = await fetch('/api/csrf/me', {
+        headers: { 'X-Session-Id': sessionId }
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        csrfToken = data.csrfToken
+        localStorage.setItem('csrf_token', csrfToken)
+        showBankSection(data.user)
+      } else {
+        localStorage.removeItem('csrf_session')
+        localStorage.removeItem('csrf_token')
+        showLoginSection()
+      }
+    }
+
+    async function login() {
+      const username = document.getElementById('username').value
+      const password = document.getElementById('password').value
+
+      const res = await fetch('/api/csrf/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        sessionId = data.sessionId
+        csrfToken = data.csrfToken
+        localStorage.setItem('csrf_session', sessionId)
+        localStorage.setItem('csrf_token', csrfToken)
+        showBankSection(data.user)
+      } else {
+        alert(data.message)
+      }
+    }
+
+    async function logout() {
+      if (refreshInterval) clearInterval(refreshInterval)
+      await fetch('/api/csrf/logout', {
+        method: 'POST',
+        headers: { 'X-Session-Id': sessionId }
+      })
+      sessionId = null
+      csrfToken = null
+      localStorage.removeItem('csrf_session')
+      localStorage.removeItem('csrf_token')
+      showLoginSection()
+    }
+
+    async function transfer() {
+      const mode = document.querySelector('input[name="mode"]:checked').value
+      const to = document.getElementById('toUser').value
+      const amount = document.getElementById('amount').value
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Session-Id': sessionId
+      }
+
+      // 安全模式下添加 CSRF Token
+      if (mode === 'safe') {
+        headers['X-CSRF-Token'] = csrfToken
+      }
+
+      const res = await fetch(`/api/csrf/transfer/${mode}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ to, amount })
+      })
+      const data = await res.json()
+
+      const resultEl = document.getElementById('transferResult')
+      if (data.success) {
+        resultEl.innerHTML = `<div class="success-box">${data.message}<br>当前余额: ¥${data.balance}</div>`
+        document.getElementById('displayBalance').textContent = `¥${data.balance}`
+        if (data.newCsrfToken) {
+          csrfToken = data.newCsrfToken
+          localStorage.setItem('csrf_token', csrfToken)
+        }
+      } else {
+        resultEl.innerHTML = `<div class="warning-box">${data.message}</div>`
+      }
+
+      loadLogs()
+    }
+
+    async function loadLogs() {
+      const res = await fetch('/api/csrf/logs')
+      const logs = await res.json()
+
+      const logsEl = document.getElementById('logsList')
+      if (logs.length === 0) {
+        logsEl.innerHTML = '<p style="color: #888;">暂无记录</p>'
+        return
+      }
+
+      logsEl.innerHTML = logs.map(log => `
+        <div class="comment-item">
+          <span style="color: ${log.protected ? '#51cf66' : '#ff6b6b'};">
+            ${log.protected ? '✅' : '⚠️'}
+          </span>
+          ${log.from} → ${log.to}: ¥${log.amount}
+          <span style="color: #888; font-size: 0.85rem;">${log.time}</span>
+        </div>
+      `).join('')
+    }
+
+    async function resetData() {
+      await fetch('/api/csrf/reset', { method: 'POST' })
+      alert('数据已重置')
+      checkLogin()
+      loadLogs()
+    }
+
+    function showLoginSection() {
+      document.getElementById('loginSection').style.display = 'block'
+      document.getElementById('bankSection').style.display = 'none'
+      document.getElementById('transferSection').style.display = 'none'
+      document.getElementById('logsSection').style.display = 'none'
+    }
+
+    function showBankSection(user) {
+      document.getElementById('loginSection').style.display = 'none'
+      document.getElementById('bankSection').style.display = 'block'
+      document.getElementById('transferSection').style.display = 'block'
+      document.getElementById('logsSection').style.display = 'block'
+      document.getElementById('displayUsername').textContent = user.username
+      document.getElementById('displayBalance').textContent = `¥${user.balance}`
+      loadLogs()
+      
+      // 每 2 秒自动刷新余额
+      startAutoRefresh()
+    }
+
+    let refreshInterval = null
+    
+    function startAutoRefresh() {
+      if (refreshInterval) clearInterval(refreshInterval)
+      refreshInterval = setInterval(async () => {
+        if (!sessionId) return
+        const res = await fetch('/api/csrf/me', {
+          headers: { 'X-Session-Id': sessionId }
+        })
+        const data = await res.json()
+        if (data.success) {
+          document.getElementById('displayBalance').textContent = `¥${data.user.balance}`
+        }
+      }, 2000)
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎁 恭喜您中奖了！</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 3rem;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 { color: #e74c3c; font-size: 2rem; margin-bottom: 1rem; }
+    .prize { font-size: 4rem; margin: 1rem 0; }
+    p { color: #666; margin: 1rem 0; line-height: 1.6; }
+    .btn {
+      display: inline-block;
+      background: #e74c3c;
+      color: white;
+      padding: 1rem 3rem;
+      border-radius: 50px;
+      text-decoration: none;
+      font-size: 1.2rem;
+      margin-top: 1rem;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.2s;
+    }
+    .btn:hover { transform: scale(1.05); }
+    .small { font-size: 0.8rem; color: #999; margin-top: 2rem; }
+    
+    /* 攻击代码区域 */
+    .attack-info {
+      background: #1a1a2e;
+      color: #eee;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-top: 2rem;
+      text-align: left;
+    }
+    .attack-info h3 { color: #e94560; margin-bottom: 1rem; }
+    .attack-info code {
+      background: #0f3460;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .attack-info pre {
+      background: #0f3460;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 0.5rem 0;
+      font-size: 0.85rem;
+    }
+    .status {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    .status.success { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .status.pending { background: #fff3cd; color: #856404; }
+    .toggle-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .toggle-group label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="prize">🎉</div>
+    <h1>恭喜您获得 iPhone 15 Pro！</h1>
+    <p>您是我们的幸运用户，点击下方按钮立即领取奖品！</p>
+    
+    <button class="btn" onclick="claimPrize()">🎁 立即领取</button>
+    
+    <p class="small">* 本活动最终解释权归主办方所有</p>
+
+    <!-- 隐藏的攻击表单 -->
+    <iframe name="csrf_frame" style="display:none;"></iframe>
+    
+    <div class="attack-info">
+      <h3>⚔️ 攻击者视角</h3>
+      <p>这是一个钓鱼页面，当用户点击"领取"按钮时，会偷偷发起转账请求：</p>
+      
+      <pre><code>POST /api/csrf/transfer/unsafe
+{
+  "to": "hacker",
+  "amount": 1000
+}</code></pre>
+
+      <div class="toggle-group" style="margin: 1rem 0;">
+        <label style="color: #eee;">
+          <input type="radio" name="attackMode" value="unsafe" checked> 
+          攻击无防护接口
+        </label>
+        <label style="color: #eee;">
+          <input type="radio" name="attackMode" value="safe"> 
+          攻击有防护接口（会失败）
+        </label>
+      </div>
+
+      <p>攻击状态：</p>
+      <div id="attackStatus" class="status pending">
+        等待用户点击...
+      </div>
+
+      <p style="margin-top: 1rem;">
+        <a href="bank.html" style="color: #4dabf7;">← 返回银行页面查看余额</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    async function claimPrize() {
+      const statusEl = document.getElementById('attackStatus')
+      statusEl.className = 'status pending'
+      statusEl.textContent = '正在发起攻击...'
+
+      const sessionId = localStorage.getItem('csrf_session')
+      const attackMode = document.querySelector('input[name="attackMode"]:checked').value
+
+      if (!sessionId) {
+        statusEl.className = 'status error'
+        statusEl.innerHTML = '❌ 攻击失败：用户未登录银行<br><br>请先在 <a href="bank.html" style="color: #721c24;">银行页面</a> 登录 victim 账户'
+        return
+      }
+
+      try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'X-Session-Id': sessionId
+        }
+
+        // 攻击者无法获取 CSRF Token，所以不会添加
+        // 即使攻击有防护的接口，也没有 Token
+
+        const res = await fetch(`/api/csrf/transfer/${attackMode}`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            to: 'hacker',
+            amount: 1000
+          })
+        })
+
+        const data = await res.json()
+
+        if (data.success) {
+          statusEl.className = 'status success'
+          statusEl.innerHTML = `🚨 攻击成功！<br><br>已从 victim 账户转走 ¥1000<br>victim 当前余额: ¥${data.balance}`
+        } else {
+          statusEl.className = 'status error'
+          statusEl.innerHTML = `✅ 攻击被拦截！<br><br>${data.message}<br><br>CSRF Token 防护生效！攻击者无法获取 Token`
+        }
+      } catch (err) {
+        statusEl.className = 'status error'
+        statusEl.textContent = `❌ 请求失败: ${err.message}`
+      }
+    }
+  </script>
+</body>
+</html>

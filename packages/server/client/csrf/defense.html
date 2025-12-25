@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验三：CSRF 防护</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 CSRF Lab</a>
+    </nav>
+
+    <header>
+      <h1>🛡️ CSRF 防护机制</h1>
+      <p class="subtitle">Defense Mechanisms</p>
+    </header>
+
+    <section>
+      <h2>📖 为什么 CSRF 能成功？</h2>
+      <div class="info-box">
+        <p>CSRF 攻击成功的关键：</p>
+        <ol style="margin: 0.5rem 0 0 1.5rem;">
+          <li>浏览器会自动携带目标网站的 Cookie</li>
+          <li>服务器仅凭 Cookie 判断用户身份</li>
+          <li>服务器无法区分请求是用户主动发起还是被诱导发起</li>
+        </ol>
+      </div>
+    </section>
+
+    <section>
+      <h2>🔐 防护方案一：CSRF Token</h2>
+      <p>最常用的防护方式，原理是在请求中加入攻击者无法获取的随机 Token。</p>
+      
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">工作流程</h3>
+      <pre><code>1. 用户登录时，服务器生成随机 CSRF Token
+2. Token 存储在服务器 Session 中
+3. 同时返回给前端（不能放在 Cookie 中！）
+4. 前端每次请求时，在 Header 或 Body 中携带 Token
+5. 服务器验证 Token 是否匹配</code></pre>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">为什么攻击者拿不到 Token？</h3>
+      <div class="warning-box">
+        <p>• Token 不在 Cookie 中，不会自动携带</p>
+        <p>• 同源策略阻止攻击者读取其他域的页面内容</p>
+        <p>• 攻击者无法获取 Token，请求会被拒绝</p>
+      </div>
+
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">代码示例</h3>
+      <pre><code>// 服务端验证
+app.post('/transfer', (req, res) => {
+  const sessionToken = req.session.csrfToken
+  const requestToken = req.headers['x-csrf-token']
+  
+  if (!requestToken || requestToken !== sessionToken) {
+    return res.status(403).json({ error: 'CSRF Token 验证失败' })
+  }
+  
+  // 执行转账...
+})
+
+// 前端请求
+fetch('/transfer', {
+  method: 'POST',
+  headers: {
+    'X-CSRF-Token': csrfToken  // 从页面获取
+  },
+  body: JSON.stringify({ to: 'xxx', amount: 100 })
+})</code></pre>
+    </section>
+
+    <section>
+      <h2>🍪 防护方案二：SameSite Cookie</h2>
+      <p>通过设置 Cookie 的 SameSite 属性，限制跨站请求携带 Cookie。</p>
+      
+      <h3 style="margin: 1rem 0 0.5rem; color: #4dabf7;">三种模式</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem;">
+        <thead>
+          <tr><th>值</th><th>说明</th><th>防护效果</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Strict</code></td>
+            <td>完全禁止跨站携带</td>
+            <td>最强，但影响用户体验</td>
+          </tr>
+          <tr>
+            <td><code>Lax</code></td>
+            <td>允许 GET 导航请求携带</td>
+            <td>推荐，平衡安全和体验</td>
+          </tr>
+          <tr>
+            <td><code>None</code></td>
+            <td>允许跨站携带（需 Secure）</td>
+            <td>无防护</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre style="margin-top: 1rem;"><code>// 设置 SameSite Cookie
+res.cookie('session', sessionId, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'Lax'  // 或 'Strict'
+})</code></pre>
+    </section>
+
+    <section>
+      <h2>🔍 防护方案三：验证 Referer/Origin</h2>
+      <p>检查请求的来源是否合法。</p>
+      
+      <pre><code>app.post('/transfer', (req, res) => {
+  const origin = req.headers.origin
+  const referer = req.headers.referer
+  
+  const allowedOrigins = ['https://bank.com']
+  
+  if (!allowedOrigins.includes(origin)) {
+    return res.status(403).json({ error: '非法来源' })
+  }
+  
+  // 执行转账...
+})</code></pre>
+
+      <div class="warning-box" style="margin-top: 1rem;">
+        <strong>⚠️ 注意</strong>
+        <p>Referer 可能被浏览器隐私设置屏蔽，不能作为唯一防护手段</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>✅ 防护方案四：二次确认</h2>
+      <p>对敏感操作要求用户进行二次验证：</p>
+      <ul style="margin-left: 1.5rem;">
+        <li>输入支付密码</li>
+        <li>短信验证码</li>
+        <li>图形验证码</li>
+        <li>人脸识别</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>🧪 对比测试</h2>
+      <p>当前账户余额：</p>
+      <div id="balances" class="token-display">加载中...</div>
+      
+      <div style="margin-top: 1rem;">
+        <button class="btn" onclick="testUnsafe()">❌ 无防护转账</button>
+        <button class="btn" onclick="testSafe()">✅ 有防护转账</button>
+        <button class="btn btn-secondary" onclick="resetData()">重置数据</button>
+      </div>
+      
+      <div id="testResult" style="margin-top: 1rem;"></div>
+    </section>
+  </div>
+
+  <script>
+    loadBalances()
+
+    async function loadBalances() {
+      const res = await fetch('/api/csrf/balances')
+      const data = await res.json()
+      document.getElementById('balances').innerHTML = `
+        <p>victim: <strong style="color: #51cf66;">¥${data.victim}</strong></p>
+        <p>hacker: <strong style="color: #ff6b6b;">¥${data.hacker}</strong></p>
+      `
+    }
+
+    async function testUnsafe() {
+      const sessionId = localStorage.getItem('csrf_session')
+      if (!sessionId) {
+        alert('请先在银行页面登录')
+        return
+      }
+
+      const res = await fetch('/api/csrf/transfer/unsafe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': sessionId
+        },
+        body: JSON.stringify({ to: 'hacker', amount: 100 })
+      })
+      const data = await res.json()
+      
+      document.getElementById('testResult').innerHTML = data.success
+        ? `<div class="warning-box">⚠️ 转账成功（无防护）: ${data.message}</div>`
+        : `<div class="warning-box">${data.message}</div>`
+      
+      loadBalances()
+    }
+
+    async function testSafe() {
+      const sessionId = localStorage.getItem('csrf_session')
+      const csrfToken = localStorage.getItem('csrf_token')
+      
+      if (!sessionId) {
+        alert('请先在银行页面登录')
+        return
+      }
+
+      const res = await fetch('/api/csrf/transfer/safe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': sessionId,
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({ to: 'hacker', amount: 100 })
+      })
+      const data = await res.json()
+      
+      document.getElementById('testResult').innerHTML = data.success
+        ? `<div class="success-box">✅ 转账成功（有防护）: ${data.message}</div>`
+        : `<div class="success-box">✅ ${data.message}</div>`
+      
+      if (data.newCsrfToken) {
+        localStorage.setItem('csrf_token', data.newCsrfToken)
+      }
+      
+      loadBalances()
+    }
+
+    async function resetData() {
+      await fetch('/api/csrf/reset', { method: 'POST' })
+      loadBalances()
+      document.getElementById('testResult').innerHTML = ''
+    }
+  </script>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

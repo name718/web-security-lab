@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSRF Lab - 跨站请求伪造实验</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🟡 CSRF Lab</h1>
+      <p class="subtitle">Cross-Site Request Forgery</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ 免责声明</strong>
+      <p>本实验仅供学习目的，请勿将所学知识用于非法用途！</p>
+    </div>
+
+    <section class="intro">
+      <h2>什么是 CSRF？</h2>
+      <p>CSRF（跨站请求伪造）是一种攻击方式，攻击者诱导已登录用户访问恶意页面，利用用户的身份执行非预期操作。</p>
+      
+      <div style="margin: 1.5rem 0;">
+        <h3 style="color: #4dabf7; margin-bottom: 1rem;">攻击流程</h3>
+        <pre><code>1. 用户登录银行网站，获得 Session
+2. 用户访问攻击者的钓鱼页面
+3. 钓鱼页面自动发送转账请求
+4. 浏览器自动携带 Cookie
+5. 银行服务器认为是用户本人操作
+6. 转账成功，用户损失资金！</code></pre>
+      </div>
+
+      <div class="types">
+        <div class="type-card">
+          <h3>GET 型 CSRF</h3>
+          <p>通过 img/script 标签发起请求</p>
+        </div>
+        <div class="type-card">
+          <h3>POST 型 CSRF</h3>
+          <p>通过隐藏表单自动提交</p>
+        </div>
+        <div class="type-card">
+          <h3>链接型 CSRF</h3>
+          <p>诱导用户点击恶意链接</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="labs">
+      <h2>📚 实验列表</h2>
+      
+      <a href="bank.html" class="lab-card">
+        <div class="lab-icon">🏦</div>
+        <div class="lab-info">
+          <h3>实验一：模拟银行系统</h3>
+          <p>登录银行账户，体验正常的转账流程</p>
+          <span class="difficulty easy">准备</span>
+        </div>
+      </a>
+
+      <a href="attack.html" class="lab-card">
+        <div class="lab-icon">⚔️</div>
+        <div class="lab-info">
+          <h3>实验二：CSRF 攻击演示</h3>
+          <p>模拟攻击者的钓鱼页面，发起 CSRF 攻击</p>
+          <span class="difficulty medium">核心</span>
+        </div>
+      </a>
+
+      <a href="defense.html" class="lab-card">
+        <div class="lab-icon">🛡️</div>
+        <div class="lab-info">
+          <h3>实验三：CSRF 防护</h3>
+          <p>学习 CSRF Token 防护机制</p>
+          <span class="difficulty medium">防御</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>👤 测试账号</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr><th>角色</th><th>用户名</th><th>密码</th><th>初始余额</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>受害者</td><td>victim</td><td>123456</td><td>¥10,000</td></tr>
+          <tr><td>攻击者</td><td>hacker</td><td>hack</td><td>¥0</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="defense">
+      <h2>🛡️ 防御方案</h2>
+      <ul>
+        <li><strong>CSRF Token</strong> - 每个表单包含随机 Token</li>
+        <li><strong>SameSite Cookie</strong> - 限制跨站携带 Cookie</li>
+        <li><strong>验证 Referer</strong> - 检查请求来源</li>
+        <li><strong>二次确认</strong> - 敏感操作需要验证码/密码</li>
+      </ul>
+    </section>
+
+    <p style="margin-top: 2rem; text-align: center;">
+      <a href="/xss/index.html" style="color: #e94560;">XSS Lab</a> |
+      <a href="/sql/index.html" style="color: #e94560;">SQL注入 Lab</a>
+    </p>
+  </div>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>

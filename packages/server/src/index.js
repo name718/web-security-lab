@@ -7,6 +7,7 @@ import searchRouter from './routes/search.js'
 import commentRouter from './routes/comment.js'
 import stealRouter from './routes/steal.js'
 import sqlRouter from './routes/sql.js'
+import csrfRouter from './routes/csrf.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -20,12 +21,14 @@ app.use(express.urlencoded({ extended: true }))
 // 静态文件
 app.use('/xss', express.static(join(__dirname, '../client/xss')))
 app.use('/sql', express.static(join(__dirname, '../client/sql')))
+app.use('/csrf', express.static(join(__dirname, '../client/csrf')))
 
 // API 路由
 app.use('/api/search', searchRouter)
 app.use('/api/comment', commentRouter)
 app.use('/api/steal', stealRouter)
 app.use('/api/sql', sqlRouter)
+app.use('/api/csrf', csrfRouter)
 
 // 首页重定向
 app.get('/', (req, res) => {
@@ -44,16 +47,8 @@ app.listen(PORT, () => {
    http://localhost:${PORT}
 ========================================
 
-📚 XSS Lab:
-   /xss/index.html     - XSS 实验首页
-   /xss/search.html    - 反射型 XSS
-   /xss/comment.html   - 存储型 XSS
-   /xss/steal.html     - Token 窃取
-
-📚 SQL注入 Lab:
-   /sql/index.html     - SQL注入实验首页
-   /sql/login.html     - 登录绕过
-   /sql/union.html     - UNION注入
-   /sql/search.html    - 搜索注入
+📚 XSS Lab:        /xss/index.html
+📚 SQL注入 Lab:    /sql/index.html
+📚 CSRF Lab:       /csrf/index.html
   `)
 })
