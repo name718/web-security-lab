@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JWT Lab - JWT 安全漏洞实验</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🟣 JWT Lab</h1>
+      <p class="subtitle">JSON Web Token 安全漏洞</p>
+    </header>
+
+    <div class="warning-box">
+      <strong>⚠️ 免责声明</strong>
+      <p>本实验仅供学习目的，请勿将所学知识用于非法用途！</p>
+    </div>
+
+    <section class="intro">
+      <h2>什么是 JWT？</h2>
+      <p>JWT (JSON Web Token) 是一种用于身份验证的令牌格式，由三部分组成：</p>
+      
+      <pre><code>Header.Payload.Signature
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
+eyJ1c2VyIjoiYWRtaW4iLCJyb2xlIjoiYWRtaW4ifQ.
+SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</code></pre>
+
+      <div class="types">
+        <div class="type-card">
+          <h3>Header</h3>
+          <p>算法和类型<br><code>{"alg":"HS256"}</code></p>
+        </div>
+        <div class="type-card">
+          <h3>Payload</h3>
+          <p>用户数据<br><code>{"user":"admin"}</code></p>
+        </div>
+        <div class="type-card">
+          <h3>Signature</h3>
+          <p>签名验证<br><code>HMAC(header.payload)</code></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="labs">
+      <h2>📚 实验列表</h2>
+      
+      <a href="alg-none.html" class="lab-card">
+        <div class="lab-icon">🔓</div>
+        <div class="lab-info">
+          <h3>实验一：算法混淆攻击 (alg: none)</h3>
+          <p>将算法改为 none，绕过签名验证</p>
+          <span class="difficulty hard">高危</span>
+        </div>
+      </a>
+
+      <a href="weak-secret.html" class="lab-card">
+        <div class="lab-icon">🔑</div>
+        <div class="lab-info">
+          <h3>实验二：弱密钥爆破</h3>
+          <p>使用字典爆破弱密钥，伪造任意 Token</p>
+          <span class="difficulty medium">中危</span>
+        </div>
+      </a>
+
+      <a href="sensitive.html" class="lab-card">
+        <div class="lab-icon">👁️</div>
+        <div class="lab-info">
+          <h3>实验三：敏感信息泄露</h3>
+          <p>JWT Payload 只是 Base64 编码，不是加密</p>
+          <span class="difficulty easy">低危</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>🔍 JWT 结构解析</h2>
+      <div class="info-box">
+        <p><strong>重要：</strong>JWT 的 Header 和 Payload 只是 Base64 编码，<strong>不是加密</strong>！</p>
+        <p>任何人都可以解码查看内容，签名只保证数据未被篡改。</p>
+      </div>
+      
+      <pre><code>// 解码 JWT
+const [header, payload, signature] = token.split('.')
+console.log(JSON.parse(atob(header)))   // 明文 Header
+console.log(JSON.parse(atob(payload)))  // 明文 Payload</code></pre>
+    </section>
+
+    <section class="defense">
+      <h2>🛡️ 安全建议</h2>
+      <ul>
+        <li><strong>使用强密钥</strong> - 至少 256 位随机密钥</li>
+        <li><strong>验证算法</strong> - 服务端指定算法，拒绝 none</li>
+        <li><strong>不存敏感数据</strong> - Payload 中不放密码、密钥等</li>
+        <li><strong>设置过期时间</strong> - exp 字段必须验证</li>
+        <li><strong>使用 HTTPS</strong> - 防止 Token 被窃取</li>
+      </ul>
+    </section>
+
+    <p style="margin-top: 2rem; text-align: center;">
+      <a href="/" style="color: #e94560;">← 返回首页</a>
+    </p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验一：算法混淆攻击</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 JWT Lab</a>
+    </nav>
+
+    <header>
+      <h1>🔓 算法混淆攻击 (alg: none)</h1>
+      <p class="subtitle">Algorithm Confusion Attack</p>
+    </header>
+
+    <section>
+      <h2>📖 漏洞原理</h2>
+      <p>JWT 规范允许 <code>alg: "none"</code> 表示不使用签名。如果服务端没有正确验证算法，攻击者可以：</p>
+      <ol style="margin: 1rem 0 0 1.5rem;">
+        <li>获取一个有效的 JWT</li>
+        <li>修改 Header 中的 alg 为 "none"</li>
+        <li>修改 Payload 中的用户信息（如 role: admin）</li>
+        <li>删除签名部分</li>
+        <li>服务端接受这个无签名的 Token！</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>🧪 攻击演示</h2>
+      
+      <h3 style="margin: 1rem 0 0.5rem;">Step 1: 获取正常 Token</h3>
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+        <button class="btn" onclick="login('user')">以普通用户登录</button>
+      </div>
+      <div id="originalToken" class="token-display" style="word-break: break-all;">
+        等待登录...
+      </div>
+
+      <h3 style="margin: 1rem 0 0.5rem;">Step 2: 伪造 Token</h3>
+      <p>修改 Payload，将 role 改为 admin，算法改为 none：</p>
+      <div style="margin: 0.5rem 0;">
+        <textarea id="forgedPayload" rows="4" style="font-family: monospace;">{
+  "id": 2,
+  "username": "user",
+  "role": "admin"
+}</textarea>
+      </div>
+      <button class="btn" onclick="forgeToken()">🔧 生成伪造 Token</button>
+      <div id="forgedToken" class="token-display" style="margin-top: 0.5rem; word-break: break-all;">
+        等待伪造...
+      </div>
+
+      <h3 style="margin: 1rem 0 0.5rem;">Step 3: 验证伪造的 Token</h3>
+      <div class="toggle-group">
+        <label>
+          <input type="radio" name="verifyMode" value="unsafe" checked> 
+          ❌ 有漏洞的验证
+        </label>
+        <label>
+          <input type="radio" name="verifyMode" value="safe"> 
+          ✅ 安全的验证
+        </label>
+      </div>
+      <button class="btn" onclick="verifyToken()" style="margin-top: 0.5rem;">🔍 验证 Token</button>
+      <div id="verifyResult" style="margin-top: 0.5rem;"></div>
+    </section>
+
+    <section>
+      <h2>🔬 漏洞代码分析</h2>
+      <pre><code>// ❌ 有漏洞的验证
+function verifyJwt(token) {
+  const { header, payload } = parseJwt(token)
+  
+  // 漏洞：根据 header.alg 决定验证方式
+  if (header.alg === 'none') {
+    return payload  // 直接返回，不验证签名！
+  }
+  
+  // 正常验证...
+}
+
+// ✅ 安全的验证
+function verifyJwt(token) {
+  const { header, payload } = parseJwt(token)
+  
+  // 安全：服务端指定算法，忽略 header.alg
+  if (header.alg !== 'HS256') {
+    throw new Error('不支持的算法')
+  }
+  
+  // 验证签名...
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>🛡️ 防御方法</h2>
+      <ul style="margin-left: 1.5rem;">
+        <li>服务端硬编码允许的算法列表</li>
+        <li>拒绝 alg: none</li>
+        <li>使用成熟的 JWT 库（如 jsonwebtoken）并正确配置</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    let currentToken = ''
+    let forgedTokenValue = ''
+
+    async function login(username) {
+      const res = await fetch('/api/jwt/login/weak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password: username === 'admin' ? 'admin123' : '123456' })
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        currentToken = data.token
+        document.getElementById('originalToken').innerHTML = `
+          <strong>原始 Token:</strong><br>
+          <code>${data.token}</code><br><br>
+          <strong>解码后:</strong><br>
+          ${await decodeAndDisplay(data.token)}
+        `
+      }
+    }
+
+    async function decodeAndDisplay(token) {
+      const res = await fetch('/api/jwt/decode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      })
+      const data = await res.json()
+      return `Header: ${JSON.stringify(data.header)}<br>Payload: ${JSON.stringify(data.payload)}`
+    }
+
+    async function forgeToken() {
+      let payload
+      try {
+        payload = JSON.parse(document.getElementById('forgedPayload').value)
+      } catch {
+        alert('Payload JSON 格式错误')
+        return
+      }
+
+      const res = await fetch('/api/jwt/forge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload, algorithm: 'none' })
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        forgedTokenValue = data.token
+        document.getElementById('forgedToken').innerHTML = `
+          <strong>伪造的 Token (alg: none):</strong><br>
+          <code>${data.token}</code><br><br>
+          注意：签名部分为空！
+        `
+      }
+    }
+
+    async function verifyToken() {
+      if (!forgedTokenValue) {
+        alert('请先生成伪造的 Token')
+        return
+      }
+
+      const mode = document.querySelector('input[name="verifyMode"]:checked').value
+      const res = await fetch(`/api/jwt/verify/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: forgedTokenValue })
+      })
+      const data = await res.json()
+      
+      const resultEl = document.getElementById('verifyResult')
+      if (data.success) {
+        resultEl.innerHTML = `
+          <div class="${data.vulnerability ? 'warning-box' : 'success-box'}">
+            <strong>${data.vulnerability ? '🚨 攻击成功！' : '✅ 验证通过'}</strong>
+            <p>${data.message}</p>
+            ${data.vulnerability ? `<p style="color: #ff6b6b;">${data.vulnerability}</p>` : ''}
+            <p>用户信息: ${JSON.stringify(data.user)}</p>
+          </div>
+        `
+      } else {
+        resultEl.innerHTML = `
+          <div class="success-box">
+            <strong>✅ 攻击被拦截</strong>
+            <p>${data.message}</p>
+          </div>
+        `
+      }
+    }
+  </script>
+</body>
+</html>

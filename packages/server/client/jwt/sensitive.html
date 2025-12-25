@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验三：敏感信息泄露</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">← 返回 JWT Lab</a>
+    </nav>
+
+    <header>
+      <h1>👁️ 敏感信息泄露</h1>
+      <p class="subtitle">Sensitive Data Exposure</p>
+    </header>
+
+    <section>
+      <h2>📖 漏洞原理</h2>
+      <div class="warning-box">
+        <strong>⚠️ 重要误区</strong>
+        <p>JWT 的 Payload <strong>不是加密的</strong>，只是 Base64 编码！</p>
+        <p>任何人都可以解码查看内容，签名只保证数据未被篡改。</p>
+      </div>
+      
+      <p style="margin-top: 1rem;">如果在 Payload 中存储敏感信息：</p>
+      <ul style="margin: 0.5rem 0 0 1.5rem;">
+        <li>密码、密钥</li>
+        <li>信用卡号、身份证号</li>
+        <li>私密数据</li>
+      </ul>
+      <p>这些信息会被任何获取到 Token 的人看到！</p>
+    </section>
+
+    <section>
+      <h2>🧪 漏洞演示</h2>
+      
+      <h3 style="margin: 1rem 0 0.5rem;">Step 1: 获取包含敏感信息的 Token</h3>
+      <button class="btn" onclick="getSensitiveToken()">获取 Token</button>
+      <div id="tokenDisplay" class="token-display" style="margin-top: 0.5rem; word-break: break-all;">
+        等待获取...
+      </div>
+
+      <h3 style="margin: 1rem 0 0.5rem;">Step 2: 解码 Token</h3>
+      <p>无需密钥，直接 Base64 解码：</p>
+      <button class="btn" onclick="decodeToken()">🔍 解码查看</button>
+      <div id="decodedDisplay" style="margin-top: 0.5rem;"></div>
+
+      <h3 style="margin: 1rem 0 0.5rem;">Step 3: 手动解码验证</h3>
+      <p>在浏览器控制台执行：</p>
+      <pre><code id="consoleCode">// 复制 Token 后执行
+const token = 'YOUR_TOKEN_HERE'
+const payload = token.split('.')[1]
+console.log(JSON.parse(atob(payload)))</code></pre>
+    </section>
+
+    <section>
+      <h2>🔬 错误示例</h2>
+      <pre><code>// ❌ 错误：在 Payload 中存储敏感信息
+const payload = {
+  userId: 123,
+  username: 'admin',
+  password: 'admin123',      // 不应该放密码！
+  creditCard: '4111-xxxx',   // 不应该放信用卡！
+  ssn: '123-45-6789'         // 不应该放身份证！
+}
+
+// ✅ 正确：只存储必要的非敏感信息
+const payload = {
+  userId: 123,
+  username: 'admin',
+  role: 'admin',
+  iat: 1234567890,
+  exp: 1234571490
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>🛡️ 安全建议</h2>
+      <ul style="margin-left: 1.5rem;">
+        <li><strong>最小化原则</strong> - Payload 只存储必要信息</li>
+        <li><strong>不存敏感数据</strong> - 密码、密钥、个人隐私等</li>
+        <li><strong>使用 JWE</strong> - 如需加密，使用 JSON Web Encryption</li>
+        <li><strong>短期有效</strong> - 设置较短的过期时间</li>
+        <li><strong>HTTPS</strong> - 防止 Token 在传输中被窃取</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>📊 JWT vs JWE</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr><th>特性</th><th>JWT (JWS)</th><th>JWE</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Payload</td>
+            <td>Base64 编码（可读）</td>
+            <td>加密（不可读）</td>
+          </tr>
+          <tr>
+            <td>用途</td>
+            <td>身份验证、授权</td>
+            <td>传输敏感数据</td>
+          </tr>
+          <tr>
+            <td>性能</td>
+            <td>快</td>
+            <td>较慢</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    let currentToken = ''
+
+    async function getSensitiveToken() {
+      const res = await fetch('/api/jwt/login/sensitive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'admin', password: 'admin123' })
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        currentToken = data.token
+        document.getElementById('tokenDisplay').innerHTML = `
+          <code>${data.token}</code>
+          <p style="margin-top: 0.5rem; color: #ff6b6b;">${data.warning}</p>
+        `
+        document.getElementById('consoleCode').textContent = 
+          `const token = '${data.token}'\nconst payload = token.split('.')[1]\nconsole.log(JSON.parse(atob(payload)))`
+      }
+    }
+
+    async function decodeToken() {
+      if (!currentToken) {
+        alert('请先获取 Token')
+        return
+      }
+
+      const res = await fetch('/api/jwt/decode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: currentToken })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        document.getElementById('decodedDisplay').innerHTML = `
+          <div class="warning-box">
+            <strong>🚨 敏感信息暴露！</strong>
+            <p><strong>Header:</strong></p>
+            <pre>${JSON.stringify(data.header, null, 2)}</pre>
+            <p><strong>Payload:</strong></p>
+            <pre>${JSON.stringify(data.payload, null, 2)}</pre>
+            <p style="color: #ff6b6b; margin-top: 1rem;">
+              ⚠️ 密码、信用卡、身份证号全部暴露！
+            </p>
+          </div>
+        `
+      }
+    }
+  </script>
+
+  <style>
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+    th { background: #0f3460; }
+  </style>
+</body>
+</html>
