@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug 接口暴露 - 敏感信息泄露</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .leak-data { background: #1a1a2e; color: #0f0; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 400px; overflow: auto; white-space: pre-wrap; }
+    .danger-badge { background: #f44336; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回敏感信息泄露</a>
+    <h1>🐛 实验一：Debug 接口暴露</h1>
+
+    <div class="warning-box">
+      <strong>⚠️ 漏洞场景</strong>
+      <p>开发环境的调试接口在生产环境未关闭，攻击者可直接访问获取敏感配置</p>
+    </div>
+
+    <section>
+      <h2>🎮 攻击演示</h2>
+      <div class="info-box">
+        <p>常见的 Debug 接口路径：</p>
+        <ul>
+          <li><code>/debug</code> - 自定义调试接口</li>
+          <li><code>/actuator</code> - Spring Boot Actuator</li>
+          <li><code>/__debug__</code> - 框架调试端点</li>
+          <li><code>/phpinfo.php</code> - PHP 信息页</li>
+        </ul>
+        <button onclick="fetchDebug()" class="btn" style="margin-top: 10px;">访问 /api/infoleak/unsafe/debug</button>
+      </div>
+      
+      <h3>泄露的数据 <span class="danger-badge">危险</span></h3>
+      <div class="leak-data" id="debug-result">点击上方按钮查看泄露内容...</div>
+    </section>
+
+    <section>
+      <h2>💀 泄露内容分析</h2>
+      <table class="info-table">
+        <tr><th>泄露项</th><th>危害</th></tr>
+        <tr><td>数据库连接信息</td><td>攻击者可直接连接数据库</td></tr>
+        <tr><td>AWS 密钥</td><td>云资源被完全控制</td></tr>
+        <tr><td>JWT Secret</td><td>可伪造任意用户 Token</td></tr>
+        <tr><td>API Keys</td><td>第三方服务被滥用</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>🛡️ 防御方案</h2>
+      <pre><code>// 1. 环境判断
+if (process.env.NODE_ENV === 'production') {
+  // 禁用所有调试路由
+}
+
+// 2. IP 白名单
+app.use('/debug', (req, res, next) => {
+  const allowedIPs = ['127.0.0.1', '10.0.0.0/8']
+  if (!isAllowed(req.ip, allowedIPs)) {
+    return res.status(403).send('Forbidden')
+  }
+  next()
+})
+
+// 3. 认证保护
+app.use('/debug', requireAdminAuth)</code></pre>
+    </section>
+  </div>
+
+  <script>
+    async function fetchDebug() {
+      const res = await fetch('/api/infoleak/unsafe/debug')
+      const data = await res.json()
+      document.getElementById('debug-result').textContent = JSON.stringify(data, null, 2)
+    }
+  </script>
+</body>
+</html>

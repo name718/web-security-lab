@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>防重放机制 - Token 重放攻击</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .device-box { border: 2px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .device-a { border-color: #4caf50; background: #f1f8e9; }
+    .device-b { border-color: #2196f3; background: #e3f2fd; }
+    .device-label { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; }
+    .device-a .device-label { background: #4caf50; color: white; }
+    .device-b .device-label { background: #2196f3; color: white; }
+    .token-display { background: #263238; color: #aed581; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all; margin: 10px 0; font-size: 12px; }
+    .result-box { background: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 10px; min-height: 60px; }
+    .success { color: #4caf50; }
+    .error { color: #f44336; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回 Token 重放攻击</a>
+    <h1>🛡️ 实验二：防重放机制</h1>
+
+    <div class="info-box">
+      <strong>防护方案</strong>
+      <p>通过设备绑定和一次性 Nonce，阻止 Token 在其他设备使用</p>
+    </div>
+
+    <section>
+      <h2>🎮 设备绑定演示</h2>
+      
+      <div class="device-box device-a">
+        <span class="device-label">📱 设备 A (Device-001)</span>
+        <button onclick="loginSafeA()" class="btn">安全登录 (alice)</button>
+        <div class="token-display" id="safe-token-a">Token: 未登录</div>
+        <button onclick="copyTokenSafe()" class="btn btn-secondary">📋 复制 Token</button>
+        <button onclick="checkProfileSafeA()" class="btn btn-secondary">查看资料</button>
+        <div class="result-box" id="safe-result-a">登录后查看结果...</div>
+      </div>
+
+      <div class="device-box device-b">
+        <span class="device-label">💻 设备 B (Device-002) - 尝试重放</span>
+        <input type="text" id="stolen-token-safe" placeholder="粘贴窃取的 Token" style="width: 100%; padding: 8px; margin: 10px 0;">
+        <button onclick="useStolenSafe()" class="btn">使用窃取的 Token</button>
+        <div class="result-box" id="safe-result-b">粘贴 Token 后操作...</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>🔐 Nonce 防重放演示</h2>
+      <div class="info-box">
+        <p>每次敏感操作需要唯一的 Nonce，使用后立即失效</p>
+        <div style="margin-top: 10px;">
+          <button onclick="transferWithNonce()" class="btn">转账 ¥100 (带 Nonce)</button>
+          <button onclick="replayTransfer()" class="btn" style="background: #f44336;">重放相同请求</button>
+        </div>
+        <div class="result-box" id="nonce-result">点击按钮测试...</div>
+        <p style="margin-top: 10px;"><small>当前 Nonce: <code id="current-nonce">-</code></small></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>💻 防护代码</h2>
+      <pre><code>// 设备绑定
+router.post('/login', (req, res) => {
+  const deviceId = req.headers['x-device-id']
+  const token = generateToken()
+  sessions[token] = { userId, deviceId }  // 绑定设备
+  res.json({ token })
+})
+
+router.get('/profile', (req, res) => {
+  const session = sessions[token]
+  if (session.deviceId !== req.headers['x-device-id']) {
+    return res.status(403).json({ error: '设备不匹配' })
+  }
+  // ...
+})
+
+// Nonce 防重放
+router.post('/transfer', (req, res) => {
+  const { nonce } = req.body
+  if (usedNonces.has(nonce)) {
+    return res.status(400).json({ error: '请求已过期' })
+  }
+  usedNonces.add(nonce)
+  // 执行转账...
+})</code></pre>
+    </section>
+
+    <section>
+      <h2>📊 账户状态</h2>
+      <p>alice 余额: <strong id="balance">加载中...</strong></p>
+      <button onclick="resetAll()" class="btn btn-secondary">重置数据</button>
+    </section>
+  </div>
+
+  <script>
+    let safeToken = ''
+    let lastNonce = ''
+    const deviceA = 'Device-001'
+    const deviceB = 'Device-002'
+    
+    async function loginSafeA() {
+      const res = await fetch('/api/replay/safe/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Device-ID': deviceA },
+        body: JSON.stringify({ username: 'alice', password: 'alice123' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        safeToken = data.token
+        document.getElementById('safe-token-a').textContent = 'Token: ' + data.token
+        document.getElementById('safe-result-a').innerHTML = '<span class="success">✅ 登录成功 (设备绑定)</span>'
+      }
+    }
+    
+    function copyTokenSafe() {
+      if (safeToken) {
+        navigator.clipboard.writeText(safeToken)
+        alert('Token 已复制')
+      }
+    }
+    
+    async function checkProfileSafeA() {
+      if (!safeToken) return alert('请先登录')
+      const res = await fetch('/api/replay/safe/profile', {
+        headers: { 'Authorization': 'Bearer ' + safeToken, 'X-Device-ID': deviceA }
+      })
+      const data = await res.json()
+      document.getElementById('safe-result-a').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`
+    }
+    
+    async function useStolenSafe() {
+      const token = document.getElementById('stolen-token-safe').value
+      if (!token) return alert('请输入 Token')
+      // 使用不同的设备 ID
+      const res = await fetch('/api/replay/safe/profile', {
+        headers: { 'Authorization': 'Bearer ' + token, 'X-Device-ID': deviceB }
+      })
+      const data = await res.json()
+      const isError = data.error
+      document.getElementById('safe-result-b').innerHTML = 
+        `<span class="${isError ? 'error' : 'success'}">${isError ? '❌' : '✅'}</span>
+         <pre>${JSON.stringify(data, null, 2)}</pre>`
+    }
+    
+    async function transferWithNonce() {
+      if (!safeToken) return alert('请先在设备 A 登录')
+      lastNonce = 'nonce_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+      document.getElementById('current-nonce').textContent = lastNonce
+      
+      const res = await fetch('/api/replay/safe/transfer', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + safeToken,
+          'X-Device-ID': deviceA
+        },
+        body: JSON.stringify({ amount: 100, nonce: lastNonce })
+      })
+      const data = await res.json()
+      document.getElementById('nonce-result').innerHTML = 
+        `<span class="${data.success ? 'success' : 'error'}">${data.success ? '✅' : '❌'}</span> ${data.message || data.error}`
+      loadBalance()
+    }
+    
+    async function replayTransfer() {
+      if (!lastNonce) return alert('请先执行一次正常转账')
+      // 重放相同的 nonce
+      const res = await fetch('/api/replay/safe/transfer', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + safeToken,
+          'X-Device-ID': deviceA
+        },
+        body: JSON.stringify({ amount: 100, nonce: lastNonce })
+      })
+      const data = await res.json()
+      document.getElementById('nonce-result').innerHTML = 
+        `<span class="${data.success ? 'success' : 'error'}">${data.success ? '✅' : '❌'}</span> ${data.message || data.error}`
+    }
+    
+    async function loadBalance() {
+      if (!safeToken) return
+      const res = await fetch('/api/replay/safe/profile', {
+        headers: { 'Authorization': 'Bearer ' + safeToken, 'X-Device-ID': deviceA }
+      })
+      const data = await res.json()
+      document.getElementById('balance').textContent = data.balance ? `¥${data.balance}` : '-'
+    }
+    
+    async function resetAll() {
+      await fetch('/api/replay/reset', { method: 'POST' })
+      safeToken = ''
+      lastNonce = ''
+      document.getElementById('safe-token-a').textContent = 'Token: 未登录'
+      document.getElementById('safe-result-a').textContent = '登录后查看结果...'
+      document.getElementById('safe-result-b').textContent = '粘贴 Token 后操作...'
+      document.getElementById('nonce-result').textContent = '点击按钮测试...'
+      document.getElementById('current-nonce').textContent = '-'
+      document.getElementById('balance').textContent = '¥10000'
+    }
+    
+    loadBalance()
+  </script>
+</body>
+</html>

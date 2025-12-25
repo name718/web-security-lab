@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>配置文件暴露 - 敏感信息泄露</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .leak-data { background: #1a1a2e; color: #0f0; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 300px; overflow: auto; white-space: pre-wrap; }
+    .file-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 15px 0; }
+    .file-btn { background: #263238; color: #fff; border: none; padding: 10px; border-radius: 4px; cursor: pointer; text-align: left; }
+    .file-btn:hover { background: #37474f; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回敏感信息泄露</a>
+    <h1>⚙️ 实验三：配置文件暴露</h1>
+
+    <div class="warning-box">
+      <strong>⚠️ 漏洞场景</strong>
+      <p>配置文件、环境变量、源码等敏感文件可被直接访问</p>
+    </div>
+
+    <section>
+      <h2>🎮 模拟攻击</h2>
+      <p>攻击者常尝试访问的敏感路径：</p>
+      <div class="file-list">
+        <button class="file-btn" onclick="fetchFile('/api/infoleak/unsafe/config')">📄 /config.json</button>
+        <button class="file-btn" onclick="fetchFile('/api/infoleak/unsafe/env')">📄 /.env</button>
+        <button class="file-btn" onclick="fetchFile('/api/infoleak/unsafe/source')">📄 /server.js.bak</button>
+        <button class="file-btn" onclick="fetchFile('/api/infoleak/unsafe/debug')">📄 /debug</button>
+      </div>
+      
+      <h3>泄露内容</h3>
+      <div class="leak-data" id="file-content">选择上方文件查看内容...</div>
+    </section>
+
+    <section>
+      <h2>📋 常见敏感文件</h2>
+      <table class="info-table">
+        <tr><th>文件</th><th>内容</th><th>危害等级</th></tr>
+        <tr><td>.env</td><td>环境变量、密钥</td><td>🔴 严重</td></tr>
+        <tr><td>.git/config</td><td>Git 仓库信息</td><td>🟠 高</td></tr>
+        <tr><td>config.json</td><td>应用配置</td><td>🔴 严重</td></tr>
+        <tr><td>*.bak, *.old</td><td>备份文件</td><td>🟠 高</td></tr>
+        <tr><td>package.json</td><td>依赖版本</td><td>🟡 中</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>🛡️ 防御措施</h2>
+      <pre><code># Nginx 配置
+location ~ /\. {
+  deny all;  # 禁止访问隐藏文件
+}
+
+location ~* \.(env|config|bak|old|sql)$ {
+  deny all;  # 禁止访问敏感扩展名
+}
+
+# .gitignore
+.env
+*.bak
+config/*.json</code></pre>
+    </section>
+  </div>
+
+  <script>
+    async function fetchFile(url) {
+      const res = await fetch(url)
+      const text = await res.text()
+      try {
+        const json = JSON.parse(text)
+        document.getElementById('file-content').textContent = JSON.stringify(json, null, 2)
+      } catch {
+        document.getElementById('file-content').textContent = text
+      }
+    }
+  </script>
+</body>
+</html>

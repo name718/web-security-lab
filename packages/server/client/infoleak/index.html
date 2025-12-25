@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>敏感信息泄露 - Security Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← 返回首页</a>
+    <h1>🔓 敏感信息泄露</h1>
+    
+    <div class="warning-box">
+      <strong>⚠️ 学习目的</strong>
+      <p>敏感信息泄露是 OWASP Top 10 常见漏洞，可能导致数据库密码、API 密钥等关键信息暴露</p>
+    </div>
+
+    <section>
+      <h2>🧪 实验列表</h2>
+      
+      <a href="debug.html" class="lab-card">
+        <div class="lab-icon">🐛</div>
+        <div class="lab-info">
+          <h3>实验一：Debug 接口暴露</h3>
+          <p>开发调试接口未关闭，暴露系统配置</p>
+          <span class="difficulty hard">高危</span>
+        </div>
+      </a>
+
+      <a href="error.html" class="lab-card">
+        <div class="lab-icon">💥</div>
+        <div class="lab-info">
+          <h3>实验二：错误堆栈泄露</h3>
+          <p>详细错误信息暴露代码路径和配置</p>
+          <span class="difficulty medium">中危</span>
+        </div>
+      </a>
+
+      <a href="config.html" class="lab-card">
+        <div class="lab-icon">⚙️</div>
+        <div class="lab-info">
+          <h3>实验三：配置文件暴露</h3>
+          <p>.env、config.json 等配置文件可访问</p>
+          <span class="difficulty hard">高危</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>📖 常见泄露类型</h2>
+      <table class="info-table">
+        <tr><th>类型</th><th>示例</th><th>危害</th></tr>
+        <tr><td>Debug 接口</td><td>/debug, /actuator</td><td>系统信息、配置暴露</td></tr>
+        <tr><td>错误堆栈</td><td>500 错误详情</td><td>代码路径、框架版本</td></tr>
+        <tr><td>配置文件</td><td>.env, config.json</td><td>数据库密码、API 密钥</td></tr>
+        <tr><td>源码泄露</td><td>.git, .svn</td><td>完整源代码</td></tr>
+        <tr><td>备份文件</td><td>.bak, .old</td><td>历史数据、配置</td></tr>
+      </table>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token 重放攻击演示 - Security Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+  <style>
+    .device-box { border: 2px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .device-a { border-color: #4caf50; background: #f1f8e9; }
+    .device-b { border-color: #f44336; background: #ffebee; }
+    .device-label { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; }
+    .device-a .device-label { background: #4caf50; color: white; }
+    .device-b .device-label { background: #f44336; color: white; }
+    .token-display { background: #263238; color: #aed581; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all; margin: 10px 0; }
+    .result-box { background: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 10px; min-height: 60px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回 Token 重放攻击</a>
+    <h1>🎯 实验一：Token 重放攻击</h1>
+
+    <div class="warning-box">
+      <strong>⚠️ 攻击场景</strong>
+      <p>攻击者获取用户 Token 后，在自己的设备上使用，冒充用户身份</p>
+    </div>
+
+    <section>
+      <h2>🎮 攻击演示</h2>
+      
+      <div class="device-box device-a">
+        <span class="device-label">📱 设备 A (受害者)</span>
+        <p>用户 alice 在自己的设备登录</p>
+        <button onclick="loginDeviceA()" class="btn">登录 (alice / alice123)</button>
+        <div class="token-display" id="token-a">Token: 未登录</div>
+        <button onclick="copyToken()" class="btn btn-secondary">📋 复制 Token</button>
+        <button onclick="checkProfileA()" class="btn btn-secondary">查看资料</button>
+        <div class="result-box" id="result-a">登录后查看结果...</div>
+      </div>
+
+      <div style="text-align: center; padding: 20px;">
+        <span style="font-size: 24px;">⬇️ 攻击者窃取 Token ⬇️</span>
+      </div>
+
+      <div class="device-box device-b">
+        <span class="device-label">💻 设备 B (攻击者)</span>
+        <p>攻击者使用窃取的 Token</p>
+        <input type="text" id="stolen-token" placeholder="粘贴窃取的 Token" style="width: 100%; padding: 8px; margin: 10px 0;">
+        <button onclick="useStolen()" class="btn">使用窃取的 Token</button>
+        <button onclick="transferStolen()" class="btn" style="background: #f44336;">转账 ¥1000</button>
+        <div class="result-box" id="result-b">粘贴 Token 后操作...</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>💀 攻击成功原因</h2>
+      <div class="info-box">
+        <ul>
+          <li>服务器只验证 Token 是否有效</li>
+          <li>不检查 Token 来源设备</li>
+          <li>不检查 IP 地址变化</li>
+          <li>Token 长期有效，无过期机制</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>📊 账户状态</h2>
+      <div id="account-status" class="info-box">
+        <p>alice 余额: <strong id="balance">加载中...</strong></p>
+      </div>
+      <button onclick="resetAll()" class="btn btn-secondary">重置数据</button>
+    </section>
+  </div>
+
+  <script>
+    let currentToken = ''
+    
+    async function loginDeviceA() {
+      const res = await fetch('/api/replay/unsafe/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'alice', password: 'alice123' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        currentToken = data.token
+        document.getElementById('token-a').textContent = 'Token: ' + data.token
+        document.getElementById('result-a').innerHTML = '<span style="color: green;">✅ 登录成功</span>'
+      }
+    }
+    
+    function copyToken() {
+      if (currentToken) {
+        navigator.clipboard.writeText(currentToken)
+        alert('Token 已复制到剪贴板')
+      }
+    }
+    
+    async function checkProfileA() {
+      if (!currentToken) return alert('请先登录')
+      const res = await fetch('/api/replay/unsafe/profile', {
+        headers: { 'Authorization': 'Bearer ' + currentToken }
+      })
+      const data = await res.json()
+      document.getElementById('result-a').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`
+      loadBalance()
+    }
+    
+    async function useStolen() {
+      const token = document.getElementById('stolen-token').value
+      if (!token) return alert('请输入 Token')
+      const res = await fetch('/api/replay/unsafe/profile', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+      const data = await res.json()
+      document.getElementById('result-b').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`
+    }
+    
+    async function transferStolen() {
+      const token = document.getElementById('stolen-token').value
+      if (!token) return alert('请输入 Token')
+      const res = await fetch('/api/replay/unsafe/transfer', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token 
+        },
+        body: JSON.stringify({ amount: 1000 })
+      })
+      const data = await res.json()
+      document.getElementById('result-b').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`
+      loadBalance()
+    }
+    
+    async function loadBalance() {
+      const res = await fetch('/api/replay/unsafe/profile', {
+        headers: { 'Authorization': 'Bearer ' + currentToken }
+      })
+      const data = await res.json()
+      document.getElementById('balance').textContent = data.balance ? `¥${data.balance}` : '未登录'
+    }
+    
+    async function resetAll() {
+      await fetch('/api/replay/reset', { method: 'POST' })
+      currentToken = ''
+      document.getElementById('token-a').textContent = 'Token: 未登录'
+      document.getElementById('result-a').textContent = '登录后查看结果...'
+      document.getElementById('result-b').textContent = '粘贴 Token 后操作...'
+      document.getElementById('stolen-token').value = ''
+      document.getElementById('balance').textContent = '¥10000'
+    }
+  </script>
+</body>
+</html>

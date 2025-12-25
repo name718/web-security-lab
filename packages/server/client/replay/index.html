@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token 重放攻击 - Security Lab</title>
+  <link rel="stylesheet" href="../xss/style.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← 返回首页</a>
+    <h1>🔄 Token / Session 重放攻击</h1>
+    
+    <div class="warning-box">
+      <strong>⚠️ 学习目的</strong>
+      <p>重放攻击是指攻击者截获合法的认证凭证后，在其他设备或时间重复使用</p>
+    </div>
+
+    <section>
+      <h2>📖 攻击原理</h2>
+      <div class="info-box">
+        <pre>
+1. 用户在设备 A 登录，获得 Token
+2. 攻击者通过某种方式获取该 Token
+   - XSS 窃取
+   - 网络嗅探
+   - 日志泄露
+3. 攻击者在设备 B 使用相同 Token
+4. 服务器无法区分，攻击者获得用户权限
+        </pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>🧪 实验列表</h2>
+      
+      <a href="attack.html" class="lab-card">
+        <div class="lab-icon">🎯</div>
+        <div class="lab-info">
+          <h3>实验一：Token 重放攻击</h3>
+          <p>演示如何复制 Token 在另一设备使用</p>
+          <span class="difficulty hard">攻击演示</span>
+        </div>
+      </a>
+
+      <a href="defense.html" class="lab-card">
+        <div class="lab-icon">🛡️</div>
+        <div class="lab-info">
+          <h3>实验二：防重放机制</h3>
+          <p>设备绑定、一次性 Token、Nonce 防护</p>
+          <span class="difficulty medium">防护方案</span>
+        </div>
+      </a>
+    </section>
+
+    <section>
+      <h2>🔧 防御方案</h2>
+      <table class="info-table">
+        <tr><th>方案</th><th>原理</th><th>适用场景</th></tr>
+        <tr><td>设备绑定</td><td>Token 与设备 ID 关联</td><td>移动端 App</td></tr>
+        <tr><td>IP 绑定</td><td>Token 与 IP 关联</td><td>固定网络环境</td></tr>
+        <tr><td>Nonce</td><td>每次请求唯一标识</td><td>敏感操作</td></tr>
+        <tr><td>短有效期</td><td>Token 快速过期</td><td>高安全场景</td></tr>
+        <tr><td>刷新机制</td><td>Access + Refresh Token</td><td>通用方案</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>📊 当前 Session</h2>
+      <div id="sessions" class="info-box">加载中...</div>
+      <button onclick="resetAll()" class="btn" style="margin-top: 10px;">重置所有数据</button>
+    </section>
+  </div>
+
+  <script>
+    async function loadSessions() {
+      const res = await fetch('/api/replay/sessions')
+      const data = await res.json()
+      if (data.length === 0) {
+        document.getElementById('sessions').innerHTML = '<p>暂无活跃 Session</p>'
+      } else {
+        document.getElementById('sessions').innerHTML = data.map(s => 
+          `<div style="margin: 5px 0; padding: 5px; background: #f5f5f5; border-radius: 4px;">
+            <strong>${s.username}</strong> - ${s.token}<br>
+            <small>设备: ${s.deviceId || s.device?.substring(0, 30) || 'unknown'}...</small>
+          </div>`
+        ).join('')
+      }
+    }
+    async function resetAll() {
+      await fetch('/api/replay/reset', { method: 'POST' })
+      loadSessions()
+      alert('已重置')
+    }
+    loadSessions()
+  </script>
+</body>
+</html>

@@ -49,11 +49,18 @@ export default {
             { text: 'DDoS 拒绝服务', link: '/labs/ddos' },
             { text: 'Clickjacking 点击劫持', link: '/labs/clickjacking' }
           ]
+        },
+        {
+          text: '信息与会话',
+          items: [
+            { text: '敏感信息泄露', link: '/labs/infoleak' },
+            { text: 'Token 重放攻击', link: '/labs/replay' }
+          ]
         }
       ]
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com' }
+      { icon: 'github', link: 'https://github.com/name718/web-security-lab' }
     ],
     footer: {
       message: '仅供学习目的，请勿用于非法用途',

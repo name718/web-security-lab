@@ -14,6 +14,8 @@ import phishingRouter from './routes/phishing.js'
 import idorRouter from './routes/idor.js'
 import rbacRouter from './routes/rbac.js'
 import clickjackingRouter from './routes/clickjacking.js'
+import infoleakRouter from './routes/infoleak.js'
+import replayRouter from './routes/replay.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -34,6 +36,8 @@ app.use('/phishing', express.static(join(__dirname, '../client/phishing')))
 app.use('/idor', express.static(join(__dirname, '../client/idor')))
 app.use('/rbac', express.static(join(__dirname, '../client/rbac')))
 app.use('/clickjacking', express.static(join(__dirname, '../client/clickjacking')))
+app.use('/infoleak', express.static(join(__dirname, '../client/infoleak')))
+app.use('/replay', express.static(join(__dirname, '../client/replay')))
 app.use('/', express.static(join(__dirname, '../client')))
 
 // API 路由
@@ -48,6 +52,8 @@ app.use('/api/phishing', phishingRouter)
 app.use('/api/idor', idorRouter)
 app.use('/api/rbac', rbacRouter)
 app.use('/api/clickjacking', clickjackingRouter)
+app.use('/api/infoleak', infoleakRouter)
+app.use('/api/replay', replayRouter)
 
 // 首页
 app.get('/', (req, res) => {
