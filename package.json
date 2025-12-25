@@ -3,11 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "dev:lab": "pnpm --filter lab dev",
-    "dev:server": "pnpm --filter server dev",
-    "build": "pnpm -r build",
-    "install:all": "pnpm install"
+    "dev": "pnpm --filter server dev",
+    "start": "pnpm --filter server start"
   },
   "engines": {
     "node": ">=18.0.0"
