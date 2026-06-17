@@ -1,38 +1,86 @@
 @import "tailwindcss";
 
 @theme {
-    --color-mozi-black: #050505;
-    --color-mozi-dark: #0a0a0a;
-    --color-mozi-grey: #1a1a1a;
-    --color-mozi-text: #e5e5e5;
-    --color-mozi-accent: #00f2ff; /* Cyan */
-    --color-mozi-safe: #00ff88; /* Emerald */
-    --color-mozi-danger: #ff3366; /* Rose/Red */
+    --color-mozi-black: var(--bg-primary);
+    --color-mozi-dark: var(--bg-secondary);
+    --color-mozi-grey: var(--bg-tertiary);
+    --color-mozi-text: var(--text-primary);
+    --color-mozi-text-muted: var(--text-secondary);
+    --color-mozi-border: var(--border-primary);
 
-    --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-    --font-mono: "Fira Code", ui-monospace, monospace;
+    --color-mozi-accent: var(--accent-color);
+    --color-mozi-safe: var(--safe-color);
+    --color-mozi-danger: var(--danger-color);
+
+    --font-sans:
+        "Inter", "Source Han Sans SC", system-ui, -apple-system, sans-serif;
+    --font-mono: "Fira Code", "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* 柔和的暗色模式 (不再是纯黑，提高对比度) */
+:root {
+    --bg-primary: #0d1117; /* 经典的深灰蓝，护眼且深邃 */
+    --bg-secondary: #161b22; /* 稍微浅一点的背景 */
+    --bg-tertiary: #21262d; /* 边框和悬浮色 */
+    --text-primary: #e6edf3; /* 柔和白 */
+    --text-secondary: #8b949e; /* 灰色文本 */
+    --border-primary: #30363d; /* 清晰的边框线 */
+
+    --accent-color: #58a6ff; /* 柔和蓝 */
+    --safe-color: #3fb950; /* 柔和绿 */
+    --danger-color: #f85149; /* 柔和红 */
+}
+
+/* 柔和的亮色模式 (减少白光刺眼) */
+:root.light {
+    --bg-primary: #f6f8fa; /* 浅灰色，减少反光 */
+    --bg-secondary: #ffffff; /* 纯白用于卡片 */
+    --bg-tertiary: #eff2f5; /* 辅助背景 */
+    --text-primary: #1f2328; /* 深灰黑 */
+    --text-secondary: #656d76; /* 次要文本 */
+    --border-primary: #d0d7de; /* 明确的浅灰边框 */
+
+    --accent-color: #0969da; /* 专业的深蓝 */
+    --safe-color: #1a7f37; /* 专业的深绿 */
+    --danger-color: #cf222e; /* 专业的深红 */
 }
 
 @layer base {
     body {
-        @apply bg-mozi-black text-mozi-text font-sans antialiased;
+        @apply bg-mozi-black text-mozi-text font-sans antialiased transition-colors duration-300;
     }
 }
 
-/* Custom glow effects for Mozi style */
+/* 改进的阴影和发光，亮色模式下减少发光，增加实体感 */
 .mozi-glow {
-    box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+    box-shadow: 0 0 15px var(--accent-color);
+    opacity: 0.8;
 }
 
 .mozi-glow-hover:hover {
-    box-shadow: 0 0 25px rgba(0, 242, 255, 0.5);
+    box-shadow: 0 0 25px var(--accent-color);
     transition: all 0.3s ease-in-out;
 }
 
 .mozi-border {
-    border: 1px solid rgba(0, 242, 255, 0.2);
+    border: 1px solid var(--border-primary);
 }
 
 .mozi-gradient-text {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-mozi-accent to-mozi-safe;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
 }

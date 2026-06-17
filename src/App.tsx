@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/Layout/AppLayout";
 import Home from "./pages/Home";
+import Fundamentals from "./pages/Fundamentals";
+import XSSLab from "./pages/XSSLab/XSSLab";
+import CSRFLab from "./pages/CSRFLab/CSRFLab";
 
 function App() {
   return (
@@ -8,22 +11,9 @@ function App() {
       <AppLayout>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route
-            path="/xss"
-            element={
-              <div className="text-center py-20 text-mozi-text/60">
-                XSS 实验室正在建设中...
-              </div>
-            }
-          />
-          <Route
-            path="/csrf"
-            element={
-              <div className="text-center py-20 text-mozi-text/60">
-                CSRF 实验室正在建设中...
-              </div>
-            }
-          />
+          <Route path="/fundamentals" element={<Fundamentals />} />
+          <Route path="/xss" element={<XSSLab />} />
+          <Route path="/csrf" element={<CSRFLab />} />
         </Routes>
       </AppLayout>
     </Router>
