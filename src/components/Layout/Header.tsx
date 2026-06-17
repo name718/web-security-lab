@@ -1,0 +1,48 @@
+import React from "react";
+import { Shield, Menu } from "lucide-react";
+import { Link } from "react-router-dom";
+
+const Header: React.FC = () => {
+  return (
+    <header className="sticky top-0 z-50 w-full border-b border-mozi-grey bg-mozi-black/80 backdrop-blur-md">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 group">
+          <Shield className="w-8 h-8 text-mozi-accent group-hover:scale-110 transition-transform" />
+          <span className="text-xl font-bold tracking-tighter mozi-gradient-text">
+            WEB SEC LAB
+          </span>
+        </Link>
+
+        <nav className="hidden md:flex items-center gap-8">
+          <Link
+            to="/"
+            className="text-sm font-medium hover:text-mozi-accent transition-colors"
+          >
+            首页
+          </Link>
+          <Link
+            to="/xss"
+            className="text-sm font-medium hover:text-mozi-accent transition-colors"
+          >
+            XSS 实验室
+          </Link>
+          <Link
+            to="/csrf"
+            className="text-sm font-medium hover:text-mozi-accent transition-colors"
+          >
+            CSRF 实验室
+          </Link>
+          <button className="px-4 py-2 rounded-full bg-mozi-accent/10 border border-mozi-accent/30 text-mozi-accent text-sm hover:bg-mozi-accent hover:text-mozi-black transition-all">
+            开始学习
+          </button>
+        </nav>
+
+        <button className="md:hidden text-mozi-text">
+          <Menu className="w-6 h-6" />
+        </button>
+      </div>
+    </header>
+  );
+};
+
+export default Header;
