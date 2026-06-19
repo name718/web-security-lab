@@ -74,75 +74,63 @@ const Fundamentals: React.FC = () => {
   const currentStep = steps[currentIdx];
 
   return (
-    <div className="min-h-screen bg-mozi-black text-mozi-text font-sans selection:bg-cyan-500/30 pb-20 transition-colors duration-300">
-      {/* Top Professional Navigation */}
-      <nav className="border-b border-mozi-border bg-mozi-black/40 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-mozi-accent/10 rounded-lg border border-mozi-accent/30">
-              <Activity className="w-6 h-6 text-mozi-accent" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tighter uppercase">
-                协议分析仪 v2.0
-              </h1>
-              <p className="text-[10px] font-mono text-mozi-text-muted tracking-widest uppercase">
-                System Core / Fundamentals
-              </p>
-            </div>
+    <div className="space-y-6 pb-4 transition-colors duration-300 selection:bg-cyan-500/30">
+      {/* 页头 */}
+      <div className="flex flex-col gap-4 border-b border-mozi-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 text-mozi-accent">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-mozi-accent/30 bg-mozi-accent/10">
+              <Activity className="h-5 w-5" />
+            </span>
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-mozi-text-muted">
+              System Core / Fundamentals
+            </span>
           </div>
-
-          <div className="flex items-center gap-1 bg-mozi-dark p-1 rounded-xl border border-mozi-border">
-            {steps.map((s, idx) => (
-              <button
-                key={s.id}
-                onClick={() => setCurrentIdx(idx)}
-                className={`px-6 py-2 rounded-lg text-xs font-mono transition-all ${
-                  idx === currentIdx
-                    ? "bg-mozi-accent text-black font-bold shadow-[0_0_20px_rgba(6,182,212,0.4)]"
-                    : "hover:bg-mozi-black/10 text-mozi-text-muted"
-                }`}
-              >
-                {s.title.split(" ")[0]}
-              </button>
-            ))}
-          </div>
-
-          <div className="hidden lg:flex items-center gap-6 text-[10px] font-mono text-mozi-text-muted tracking-widest">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-mozi-safe animate-pulse" />
-              系统就绪
-            </div>
-            <div>运行时间: 12:44:02</div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-[1600px] mx-auto px-8 py-12 text-mozi-text">
-        <div className="mb-12">
-          <h2 className="text-4xl font-black tracking-tight mb-2 uppercase">
+          <h1 className="text-3xl font-black tracking-tight text-mozi-text md:text-4xl">
             {currentStep.title}
-          </h2>
-          <p className="text-mozi-text-muted font-mono text-sm tracking-widest">
+          </h1>
+          <p className="max-w-2xl font-mono text-sm tracking-wide text-mozi-text-muted">
             {currentStep.subtitle}
           </p>
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4 }}
-          >
-            {currentStep.id === "tcp" && <TCPProModule />}
-            {currentStep.id === "http" && <HTTPProModule />}
-            {currentStep.id === "cookies" && <CookieProModule />}
-            {currentStep.id === "sop" && <SOPProModule />}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+        {/* 步骤分段控件 */}
+        <div className="flex flex-wrap gap-1.5 rounded-2xl border border-mozi-border bg-mozi-dark p-1.5">
+          {steps.map((s, idx) => (
+            <button
+              key={s.id}
+              onClick={() => setCurrentIdx(idx)}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                idx === currentIdx
+                  ? "bg-mozi-accent text-mozi-black shadow-lg"
+                  : "text-mozi-text-muted hover:bg-mozi-black/40 hover:text-mozi-text"
+              }`}
+            >
+              <span
+                className={`font-mono ${idx === currentIdx ? "opacity-70" : "opacity-50"}`}
+              >
+                0{idx + 1}
+              </span>
+              {s.title.split(" ")[0]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentStep.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.4 }}
+        >
+          {currentStep.id === "tcp" && <TCPProModule />}
+          {currentStep.id === "http" && <HTTPProModule />}
+          {currentStep.id === "cookies" && <CookieProModule />}
+          {currentStep.id === "sop" && <SOPProModule />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
@@ -324,12 +312,12 @@ const TCPProModule = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <div className="lg:col-span-8 bg-mozi-black border border-mozi-border rounded-[2rem] p-12 relative overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="lg:col-span-8 bg-mozi-black border border-mozi-border rounded-3xl p-4 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-mozi-accent/50 to-transparent"></div>
 
         {/* Phase Tabs */}
-        <div className="flex gap-2 mb-12 bg-mozi-dark/50 p-1 rounded-xl border border-mozi-border w-fit mx-auto">
+        <div className="flex gap-2 mb-4 bg-mozi-dark/50 p-1 rounded-xl border border-mozi-border w-fit mx-auto">
           {(["handshake", "data", "teardown"] as const).map((p) => (
             <button
               key={p}
@@ -341,7 +329,7 @@ const TCPProModule = () => {
           ))}
         </div>
 
-        <div className="flex justify-between items-center mb-16 px-12 relative z-10">
+        <div className="flex justify-between items-center mb-4 px-4 relative z-10">
           <div className="text-center">
             <div className="p-4 bg-mozi-accent/10 rounded-2xl border border-mozi-accent/30 mb-3">
               <LaptopIcon className="w-10 h-10 text-mozi-accent" />
@@ -354,7 +342,7 @@ const TCPProModule = () => {
               {clientState}
             </div>
           </div>
-          <div className="flex-grow mx-12 flex flex-col items-center">
+          <div className="flex-grow mx-6 flex flex-col items-center">
             <div className="w-full h-[1px] bg-mozi-border relative">
               <div className="absolute inset-0 bg-gradient-to-r from-mozi-accent/0 via-mozi-accent/20 to-mozi-accent/0 animate-pulse"></div>
             </div>
@@ -373,7 +361,7 @@ const TCPProModule = () => {
           </div>
         </div>
 
-        <div className="relative min-h-[450px] border-x border-mozi-border mx-16 md:mx-32 py-8 overflow-y-auto max-h-[500px]">
+        <div className="relative min-h-[180px] border-x border-mozi-border mx-6 md:mx-16 py-3 overflow-y-auto max-h-[240px]">
           <AnimatePresence initial={false}>
             {messages.map((m) => (
               <motion.div
@@ -411,18 +399,18 @@ const TCPProModule = () => {
         </div>
       </div>
 
-      <div className="lg:col-span-4 space-y-6">
-        <div className="bg-mozi-dark border border-mozi-border rounded-3xl p-8 space-y-6">
+      <div className="lg:col-span-4 space-y-4">
+        <div className="bg-mozi-dark border border-mozi-border rounded-3xl p-4 space-y-3">
           <div className="flex items-center gap-3 border-b border-mozi-border pb-4">
             <Terminal className="w-5 h-5 text-mozi-accent" />
             <h3 className="font-bold uppercase text-sm">协议栈控制</h3>
           </div>
           <div className="space-y-4">
-            <div className="bg-mozi-black rounded-2xl p-6 border border-mozi-border">
+            <div className="bg-mozi-black rounded-2xl p-4 border border-mozi-border">
               <h4 className="text-xs font-mono text-mozi-text-muted uppercase tracking-widest mb-2">
                 流描述
               </h4>
-              <p className="text-sm leading-relaxed min-h-[60px]">
+              <p className="text-xs leading-relaxed">
                 {step === 0
                   ? `当前处于 ${phase.toUpperCase()} 阶段。点击下方按钮开始模拟数据流。`
                   : currentSteps[step - 1].desc}
@@ -442,7 +430,7 @@ const TCPProModule = () => {
           </div>
         </div>
 
-        <div className="bg-mozi-dark border border-mozi-border rounded-3xl p-8">
+        <div className="bg-mozi-dark border border-mozi-border rounded-3xl p-4">
           <h4 className="text-xs font-mono text-mozi-text-muted uppercase tracking-widest mb-4">
             TCP 核心原理笔记
           </h4>
@@ -468,7 +456,7 @@ const HTTPProModule = () => {
   const [subStep, setSubStep] = useState(0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex gap-4 mb-8">
         {["DNS 查询 (递归+迭代)", "协议封装", "HTTP 报文"].map((t, idx) => (
           <button
@@ -481,7 +469,7 @@ const HTTPProModule = () => {
         ))}
       </div>
 
-      <div className="min-h-[650px] bg-mozi-black border border-mozi-border rounded-[2.5rem] p-12 relative">
+      <div className="min-h-[300px] bg-mozi-black border border-mozi-border rounded-3xl p-4 relative">
         <AnimatePresence mode="wait">
           {subStep === 0 && <DNSAnimation key="dns" />}
           {subStep === 1 && <EncapAnimation key="encap" />}
@@ -567,7 +555,7 @@ const DNSAnimation = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="grid grid-cols-5 gap-4 mb-20 px-8 relative">
+      <div className="grid grid-cols-5 gap-2 mb-6 px-3 relative">
         <DNSNode
           label="客户端"
           sub="浏览器"
@@ -620,8 +608,8 @@ const DNSAnimation = () => {
         </AnimatePresence>
       </div>
 
-      <div className="grid grid-cols-12 gap-8 items-center">
-        <div className="col-span-8 bg-mozi-dark border border-mozi-border p-10 rounded-[2.5rem] min-h-[220px] flex flex-col justify-center">
+      <div className="grid grid-cols-12 gap-4 items-center">
+        <div className="col-span-8 bg-mozi-dark border border-mozi-border p-4 rounded-3xl min-h-[110px] flex flex-col justify-center">
           {step === 0 ? (
             <div className="text-center italic text-mozi-text-muted">
               请点击“下一步”观察递归与迭代的区别
@@ -655,7 +643,7 @@ const DNSAnimation = () => {
           <button
             onClick={() => setStep((s) => Math.min(s + 1, 8))}
             disabled={step === 8}
-            className="py-6 bg-mozi-accent text-black font-black uppercase rounded-3xl hover:scale-105 disabled:opacity-20 transition-all flex items-center justify-center gap-2"
+            className="py-4 bg-mozi-accent text-black font-black uppercase rounded-3xl hover:scale-105 disabled:opacity-20 transition-all flex items-center justify-center gap-2"
           >
             下一步 <ArrowRight className="w-6 h-6" />
           </button>
@@ -703,7 +691,7 @@ const EncapAnimation = () => (
         数据在发出前，会被协议栈逐层包裹。每一层都增加了必要的控制信息（Headers）。
       </p>
     </div>
-    <div className="relative p-12 border-2 border-dashed border-mozi-border rounded-[3rem]">
+    <div className="relative p-4 border-2 border-dashed border-mozi-border rounded-3xl">
       <div className="space-y-4">
         {[
           {
@@ -752,13 +740,13 @@ const TransactionAnimation = () => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
-    className="h-full grid grid-cols-2 gap-12"
+    className="h-full grid grid-cols-2 gap-4"
   >
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h3 className="text-xl font-black border-l-4 border-mozi-accent pl-4">
         HTTP 请求报文 (REQUEST)
       </h3>
-      <div className="bg-mozi-dark border border-mozi-border rounded-2xl p-8 font-mono text-xs leading-relaxed text-mozi-accent/80">
+      <div className="bg-mozi-dark border border-mozi-border rounded-2xl p-4 font-mono text-xs leading-relaxed text-mozi-accent/80">
         <p className="font-black text-mozi-text text-sm mb-4">
           GET /api/user/profile HTTP/1.1
         </p>
@@ -774,11 +762,11 @@ const TransactionAnimation = () => (
         <p>Connection: keep-alive</p>
       </div>
     </div>
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h3 className="text-xl font-black border-l-4 border-mozi-safe pl-4">
         HTTP 响应报文 (RESPONSE)
       </h3>
-      <div className="bg-mozi-dark border border-mozi-border rounded-2xl p-8 font-mono text-xs leading-relaxed text-mozi-safe/80">
+      <div className="bg-mozi-dark border border-mozi-border rounded-2xl p-4 font-mono text-xs leading-relaxed text-mozi-safe/80">
         <p className="font-black text-mozi-text text-sm mb-4">
           HTTP/1.1 200 OK
         </p>
@@ -821,8 +809,8 @@ const CookieProModule = () => {
     },
   ];
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full min-h-[700px]">
-      <div className="lg:col-span-7 bg-mozi-black border border-mozi-border rounded-[2.5rem] p-12 flex flex-col justify-center">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full min-h-[300px]">
+      <div className="lg:col-span-7 bg-mozi-black border border-mozi-border rounded-3xl p-4 flex flex-col justify-center">
         <div className="flex justify-between items-center mb-24 px-12 relative">
           <div className="text-center relative">
             <div className="p-10 bg-mozi-dark border border-mozi-border rounded-3xl relative z-10 shadow-2xl">
@@ -835,7 +823,7 @@ const CookieProModule = () => {
               STORE: [session_id=99x]
             </div>
           </div>
-          <div className="flex-grow mx-12 flex flex-col items-center gap-8">
+          <div className="flex-grow mx-6 flex flex-col items-center gap-4">
             <motion.div
               animate={{ x: [0, 50, 0] }}
               transition={{ repeat: Infinity, duration: 3 }}
@@ -859,7 +847,7 @@ const CookieProModule = () => {
             </div>
           </div>
         </div>
-        <div className="bg-mozi-dark/50 rounded-3xl p-8 border border-mozi-border border-l-4 border-l-amber-500">
+        <div className="bg-mozi-dark/50 rounded-3xl p-4 border border-mozi-border border-l-4 border-l-amber-500">
           <div className="flex items-center gap-3 mb-4">
             <AlertTriangle className="w-6 h-6 text-amber-500" />
             <h4 className="text-xl font-black text-mozi-text">安全加固建议</h4>
@@ -870,12 +858,12 @@ const CookieProModule = () => {
           </p>
         </div>
       </div>
-      <div className="lg:col-span-5 flex flex-col gap-6">
+      <div className="lg:col-span-5 flex flex-col gap-4">
         {attributes.map((attr) => (
           <div
             key={attr.name}
             onMouseEnter={() => setActiveAttr(attr.name)}
-            className={`p-8 rounded-[2rem] border transition-all cursor-help ${activeAttr === attr.name ? "bg-mozi-accent/10 border-mozi-accent shadow-xl" : "bg-mozi-dark border-mozi-border"}`}
+            className={`p-4 rounded-3xl border transition-all cursor-help ${activeAttr === attr.name ? "bg-mozi-accent/10 border-mozi-accent shadow-xl" : "bg-mozi-dark border-mozi-border"}`}
           >
             <div className="flex items-center gap-4 mb-4">
               <div
@@ -894,7 +882,7 @@ const CookieProModule = () => {
             </p>
           </div>
         ))}
-        <div className="flex-grow bg-mozi-accent/5 border border-mozi-accent/10 rounded-[2.5rem] p-10 flex flex-col justify-end">
+        <div className="flex-grow bg-mozi-accent/5 border border-mozi-accent/10 rounded-3xl p-4 flex flex-col justify-end">
           <div className="font-mono text-[10px] text-mozi-accent/50 uppercase mb-4 tracking-[0.4em] font-bold">
             Protocol Best Practice
           </div>
@@ -913,15 +901,15 @@ const CookieProModule = () => {
 
 const SOPProModule = () => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full min-h-[600px]">
-      <div className="bg-mozi-black border border-mozi-border rounded-[3rem] p-12 space-y-12 transition-colors duration-300">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-[300px]">
+      <div className="bg-mozi-black border border-mozi-border rounded-3xl p-4 space-y-4 transition-colors duration-300">
         <div className="flex items-center gap-4">
           <ShieldCheck className="w-12 h-12 text-mozi-accent" />
           <h3 className="text-3xl font-black text-mozi-text">
             同源判定算法 (SOP)
           </h3>
         </div>
-        <div className="space-y-6">
+        <div className="space-y-4">
           <p className="text-mozi-text-muted text-lg">
             当且仅当两个 URL 的以下三要素
             <strong className="text-mozi-text mx-1">完全一致</strong>
@@ -935,7 +923,7 @@ const SOPProModule = () => {
             ].map((p) => (
               <div
                 key={p.l}
-                className="flex items-center justify-between p-8 bg-mozi-dark border border-mozi-border rounded-3xl shadow-sm hover:border-mozi-accent/30 transition-colors"
+                className="flex items-center justify-between p-4 bg-mozi-dark border border-mozi-border rounded-3xl shadow-sm hover:border-mozi-accent/30 transition-colors"
               >
                 <span className="text-[10px] font-mono text-mozi-text-muted uppercase font-bold tracking-widest">
                   {p.l}
@@ -948,7 +936,7 @@ const SOPProModule = () => {
           </div>
         </div>
       </div>
-      <div className="bg-mozi-black border border-mozi-border rounded-[3rem] p-12 flex flex-col justify-center items-center relative overflow-hidden transition-colors duration-300">
+      <div className="bg-mozi-black border border-mozi-border rounded-3xl p-4 flex flex-col justify-center items-center relative overflow-hidden transition-colors duration-300">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-mozi-danger/50 to-transparent"></div>
         <div className="text-center mb-16">
           <h3 className="text-2xl font-black mb-4 text-mozi-text uppercase tracking-tight">
@@ -958,8 +946,8 @@ const SOPProModule = () => {
             当你要跨过边界时，浏览器会先派出一名“侦察兵”进行探测。
           </p>
         </div>
-        <div className="w-full space-y-8 relative z-10">
-          <div className="p-8 bg-mozi-dark border border-mozi-border rounded-3xl shadow-xl">
+        <div className="w-full space-y-4 relative z-10">
+          <div className="p-4 bg-mozi-dark border border-mozi-border rounded-3xl shadow-xl">
             <div className="flex items-center gap-3 mb-4">
               <RefreshCcw className="w-5 h-5 text-amber-500 animate-spin" />
               <span className="text-xs font-mono font-black text-amber-500 uppercase tracking-widest">
@@ -973,7 +961,7 @@ const SOPProModule = () => {
           <div className="flex justify-center">
             <ArrowRight className="w-10 h-10 text-mozi-border rotate-90" />
           </div>
-          <div className="p-8 bg-mozi-safe/10 border border-mozi-safe/30 rounded-3xl shadow-2xl">
+          <div className="p-4 bg-mozi-safe/10 border border-mozi-safe/30 rounded-3xl shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <ShieldCheck className="w-5 h-5 text-mozi-safe" />
               <span className="text-xs font-mono font-black text-mozi-safe uppercase tracking-widest">

@@ -19,6 +19,7 @@
 
 /* 柔和的暗色模式 (不再是纯黑，提高对比度) */
 :root {
+    color-scheme: dark;
     --bg-primary: #0d1117; /* 经典的深灰蓝，护眼且深邃 */
     --bg-secondary: #161b22; /* 稍微浅一点的背景 */
     --bg-tertiary: #21262d; /* 边框和悬浮色 */
@@ -33,6 +34,7 @@
 
 /* 柔和的亮色模式 (减少白光刺眼) */
 :root.light {
+    color-scheme: light;
     --bg-primary: #f6f8fa; /* 浅灰色，减少反光 */
     --bg-secondary: #ffffff; /* 纯白用于卡片 */
     --bg-tertiary: #eff2f5; /* 辅助背景 */
