@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# Web Security Lab
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个面向教学的可视化 Web 安全实验室，使用 React、TypeScript、Vite、Tailwind CSS 和 Framer Motion 构建。
 
-Currently, two official plugins are available:
+项目目标不是提供真实攻击工具，而是通过可控的沙箱模拟、源码审计视角和交互式状态反馈，帮助学习者理解 Web 安全漏洞的成因与防御方式。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 当前模块
 
-## React Compiler
+- Web 核心原理：TCP、HTTP、Cookie、同源策略等基础概念可视化。
+- XSS 实验室：覆盖反射型、存储型、DOM 型场景，以及上下文注入、防御策略和 CSP 模拟。
+- CSRF 实验室：展示跨站请求、Cookie 自动携带、SameSite 策略的影响。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 运行
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 验证
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm build
+pnpm lint
 ```
+
+## 业务结构
+
+```text
+src/
+  components/       通用布局和展示组件
+  content/          课程模块与平台文案配置
+  hooks/            可复用交互逻辑
+  pages/            页面级实验室
+```
+
+课程入口统一维护在 `src/content/modules.ts`。新增漏洞实验时，应优先添加模块配置，再实现对应页面和实验状态逻辑，避免在首页、导航和页面中重复维护业务数据。
+
+## 新增安全目录
+
+在 `src/content/modules.ts` 中新增一条 `learningModules` 配置即可同步更新首页统计、首页模块卡片和顶部课程目录。
+
+关键字段：
+
+- `kind`: `foundation` 或 `lab`，用于首页统计。
+- `category`: 模块所属目录，例如 `client`、`auth`。
+- `status`: `recommended`、`available`、`planned`。`planned` 默认不进入导航和首页。
+- `order`: 控制展示顺序。
+
+如果需要新增一个全新的目录分组，同时在 `moduleCategories` 中添加分组元数据。
+
+## 安全边界
+
+实验应默认使用模拟执行，不直接运行用户输入的脚本或请求。需要展示危险行为时，优先用解析结果、动画和日志表达攻击路径；只有在明确隔离的沙箱中才考虑真实执行。
+
+## 下一步重构方向
+
+- 将 XSS/CSRF 的状态机从页面组件中抽出为独立 hook。
+- 将 payload 示例、防御策略、审计代码片段配置化。
+- 增加实验判定函数的单元测试。
+- 为每个实验补齐学习目标、复盘问题和防御检查清单。

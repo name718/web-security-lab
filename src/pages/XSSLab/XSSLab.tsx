@@ -8,19 +8,81 @@ import {
   Settings,
   Database,
   Globe,
-  Ghost,
   Cookie,
   AlertCircle,
   RefreshCcw,
   Code2,
-  Search,
-  Hash,
+  CheckCircle2,
 } from "lucide-react";
 
 type XSSMode = "none" | "blacklist" | "escape";
 type XSSScenario = "reflected" | "stored" | "dom";
 type XSSContext = "body" | "attribute" | "script" | "url";
 type CSPLevel = "none" | "default-src 'self'" | "nonce-based";
+
+const CodeComment = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-[#6A9955]">{children}</span>
+);
+
+const CodeKeyword = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-[#569cd6]">{children}</span>
+);
+
+const CodeString = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-[#ce9178]">{children}</span>
+);
+
+const CodeTag = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-[#569cd6]">{children}</span>
+);
+
+const CodeDanger = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-red-400 bg-red-400/10 px-1 rounded">{children}</span>
+);
+
+const CodeSafe = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-green-400 bg-green-400/10 px-1 rounded">
+    {children}
+  </span>
+);
+
+const contextHints: Record<XSSContext, string> = {
+  body: "HTML 正文上下文，风险来自把用户输入当作标签解析。",
+  attribute: "属性上下文，关键风险是闭合引号后插入事件处理器。",
+  script: "脚本上下文，攻击者会尝试逃逸字符串或代码块。",
+  url: "URL 上下文，重点关注 javascript:、data: 等危险协议。",
+};
+
+const defenseHints: Record<XSSMode, string> = {
+  none: "无防护：输入会进入危险 sink，适合观察漏洞原始形态。",
+  blacklist: "黑名单：只能拦截部分特征，容易被事件属性或协议绕过。",
+  escape: "上下文编码：根据 HTML/属性/JS/URL 场景做差异化处理。",
+};
+
+const xssTeachingCards = [
+  {
+    title: "漏洞成立条件",
+    items: [
+      "不可信输入进入 HTML、属性、脚本或 URL 等可执行上下文",
+      "浏览器把输入当作代码或标签解析，而不是普通文本",
+      "攻击者能借此读取 Cookie、发起请求或改写页面行为",
+    ],
+  },
+  {
+    title: "常见误区",
+    items: [
+      "只过滤 <script> 标签并不能防住事件属性、SVG、URL 协议等绕过",
+      "CSP 是纵深防御，不应替代输出编码和安全 DOM API",
+      "不同上下文必须使用不同编码，不能一套 escape 走天下",
+    ],
+  },
+];
+
+const xssReviewQuestions = [
+  "当前 payload 进入了哪个 sink？是 HTML、属性、JS 还是 URL？",
+  "如果把防御从 Blacklist 切到 Encoding，攻击结果为什么变化？",
+  "这类漏洞在真实项目里应该在输入、存储、输出哪个阶段处理？",
+];
 
 // --- XSS 注入器：强制执行脚本 ---
 const XSSInjector: React.FC<{
@@ -114,7 +176,7 @@ const XSSLab: React.FC = () => {
 
     // --- Alert Hijacking ---
     const originalAlert = window.alert;
-    window.alert = (msg: any) => {
+    window.alert = (msg?: unknown) => {
       console.log("[LAB INTERCEPT] Alert called:", msg);
       addLog(`[EXPLOIT] 检测到脚本执行！捕获 Alert: "${msg}"`);
       if (defenseMode === "none") setAttackResult("success");
@@ -188,24 +250,39 @@ const XSSLab: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 transition-colors duration-300">
+    <div className="max-w-[1600px] mx-auto space-y-4 transition-colors duration-300">
       {/* 头部信息 */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-mozi-border pb-8">
-        <div className="space-y-2">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-mozi-border pb-4">
+        <div className="space-y-1">
           <div className="flex items-center gap-3 text-mozi-danger text-glow">
-            <Zap className="w-6 h-6" />
-            <span className="font-mono text-sm tracking-widest uppercase">
+            <Zap className="w-5 h-5" />
+            <span className="font-mono text-xs tracking-widest uppercase">
               LAB_01 / Professional_XSS_Sandbox
             </span>
           </div>
-          <h1 className="text-5xl font-black tracking-tight text-mozi-text">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-mozi-text">
             XSS 深度剖析实验室{" "}
-            <span className="text-mozi-accent italic text-2xl">PRO</span>
+            <span className="text-mozi-accent italic text-xl">PRO</span>
           </h1>
-          <p className="text-mozi-text-muted max-w-3xl">
+          <p className="text-sm text-mozi-text-muted max-w-3xl">
             跨站脚本攻击深度演练。支持**多上下文注入**、**CSP 策略模拟**、**WAF
             绕过**及**实战利用载荷**。
           </p>
+          <div className="grid gap-2 pt-2 text-[10px] md:grid-cols-3">
+            {["选择场景和注入上下文", "执行 payload 观察浏览器行为", "切换防御并复盘源码"].map(
+              (step, index) => (
+                <div
+                  key={step}
+                  className="flex items-center gap-2 rounded-xl border border-mozi-border bg-mozi-dark px-3 py-2"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-mozi-safe" />
+                  <span className="text-mozi-text-muted">
+                    0{index + 1}. {step}
+                  </span>
+                </div>
+              ),
+            )}
+          </div>
         </div>
 
         <div className="flex bg-mozi-dark p-1 rounded-2xl border border-mozi-border shadow-inner">
@@ -227,12 +304,24 @@ const XSSLab: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-20">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pb-6">
         {/* 左侧控制台 */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-mozi-dark border border-mozi-border rounded-[2.5rem] p-8 space-y-6 shadow-xl">
+        <div className="lg:col-span-4 space-y-3">
+          <div className="bg-mozi-dark border border-mozi-border rounded-3xl p-4 space-y-4 shadow-xl">
+            <div className="rounded-2xl border border-mozi-accent/20 bg-mozi-accent/10 p-3">
+              <div className="mb-2 text-xs font-bold uppercase tracking-widest text-mozi-accent">
+                当前实验焦点
+              </div>
+              <p className="text-sm leading-6 text-mozi-text">
+                {contextHints[context]}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-mozi-text-muted">
+                {defenseHints[defenseMode]}
+              </p>
+            </div>
+
             {/* 注入点上下文 */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-mozi-text-muted uppercase tracking-tighter">
                 <Globe className="w-4 h-4" /> 注入点上下文 (Context)
               </div>
@@ -254,7 +343,7 @@ const XSSLab: React.FC = () => {
             </div>
 
             {/* CSP 设置 */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-mozi-text-muted uppercase tracking-tighter">
                 <ShieldCheck className="w-4 h-4" /> CSP 策略配置 (Simulator)
               </div>
@@ -278,7 +367,7 @@ const XSSLab: React.FC = () => {
             </div>
 
             {/* WAF 防御 */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-mozi-text-muted uppercase tracking-tighter">
                 <Settings className="w-4 h-4" /> WAF 防御策略
               </div>
@@ -294,7 +383,7 @@ const XSSLab: React.FC = () => {
                 ].map((mode) => (
                   <button
                     key={mode.id}
-                    onClick={() => setDefenseMode(mode.id as XSSMode)}
+                    onClick={() => handleDefenseChange(mode.id as XSSMode)}
                     className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
                       defenseMode === mode.id
                         ? `bg-mozi-black border-mozi-accent`
@@ -315,11 +404,16 @@ const XSSLab: React.FC = () => {
             </div>
 
             {/* Payload 输入 */}
-            <div className="space-y-3 pt-4 border-t border-mozi-border/30">
+            <div className="space-y-2 pt-3 border-t border-mozi-border/30">
               <div className="flex justify-between items-center">
-                <label className="text-[10px] font-mono text-mozi-text-muted uppercase">
-                  Attack Payload
-                </label>
+                <div>
+                  <label className="text-[10px] font-mono text-mozi-text-muted uppercase">
+                    Attack Payload
+                  </label>
+                  <p className="mt-1 text-[10px] text-mozi-text-muted">
+                    这里展示的是教学沙箱判定，不会执行 URL payload 中的真实脚本。
+                  </p>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
@@ -338,17 +432,26 @@ const XSSLab: React.FC = () => {
                 </div>
               </div>
 
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="在此输入攻击载荷..."
-                className="w-full h-32 bg-mozi-black border border-mozi-border rounded-2xl p-4 font-mono text-sm focus:outline-none focus:border-mozi-accent transition-colors text-mozi-text resize-none"
-              />
+              {scenario === "dom" ? (
+                <input
+                  value={urlHash}
+                  onChange={(event) => setUrlHash(event.target.value)}
+                  placeholder="#welcome"
+                  className="w-full bg-mozi-black border border-mozi-border rounded-2xl p-3 font-mono text-sm focus:outline-none focus:border-mozi-accent transition-colors text-mozi-text"
+                />
+              ) : (
+                <textarea
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="在此输入攻击载荷..."
+                  className="w-full h-24 bg-mozi-black border border-mozi-border rounded-2xl p-3 font-mono text-sm focus:outline-none focus:border-mozi-accent transition-colors text-mozi-text resize-none"
+                />
+              )}
 
               <button
                 onClick={handleAttack}
-                disabled={isAttacking || !inputValue}
-                className="w-full py-4 rounded-2xl bg-mozi-danger text-white font-black uppercase tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-30 flex items-center justify-center gap-2"
+                disabled={isAttacking || (scenario === "dom" ? !urlHash : !inputValue)}
+                className="w-full py-3 rounded-2xl bg-mozi-danger text-white font-black uppercase tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-30 flex items-center justify-center gap-2"
               >
                 {isAttacking ? (
                   <RefreshCcw className="w-4 h-4 animate-spin" />
@@ -361,7 +464,7 @@ const XSSLab: React.FC = () => {
           </div>
 
           {/* 实时分析日志 */}
-          <div className="bg-mozi-black border border-mozi-border rounded-3xl p-6 shadow-xl h-[240px] flex flex-col">
+          <div className="bg-mozi-black border border-mozi-border rounded-3xl p-4 shadow-xl h-[160px] flex flex-col">
             <div className="flex items-center gap-3 border-b border-mozi-border pb-3 mb-3">
               <Terminal className="w-4 h-4 text-mozi-safe" />
               <h3 className="font-bold uppercase text-[10px] tracking-widest text-mozi-text-muted">
@@ -387,11 +490,49 @@ const XSSLab: React.FC = () => {
               ))}
             </div>
           </div>
+
+          <details className="rounded-3xl border border-mozi-border bg-mozi-dark p-4">
+            <summary className="cursor-pointer text-sm font-black text-mozi-text">
+              教学要点 / 防御清单 / 复盘问题
+            </summary>
+            <div className="mt-4 grid gap-4">
+              {xssTeachingCards.map((card) => (
+                <div key={card.title}>
+                  <h3 className="mb-3 text-xs font-black text-mozi-text">
+                    {card.title}
+                  </h3>
+                  <div className="space-y-2">
+                    {card.items.map((item) => (
+                      <div key={item} className="flex gap-2 text-xs leading-5">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-mozi-safe" />
+                        <span className="text-mozi-text-muted">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="rounded-2xl border border-mozi-accent/30 bg-mozi-accent/10 p-3">
+                <h3 className="mb-3 text-xs font-black text-mozi-accent">
+                  复盘问题
+                </h3>
+                <div className="space-y-2">
+                  {xssReviewQuestions.map((question, index) => (
+                    <div
+                      key={question}
+                      className="rounded-xl border border-mozi-border bg-mozi-black/60 p-2 text-xs leading-5 text-mozi-text-muted"
+                    >
+                      Q{index + 1}. {question}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
 
         {/* 右侧主舞台：浏览器模拟 + 源码分析 */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="flex-1 bg-mozi-black border border-mozi-border rounded-[3rem] overflow-hidden flex flex-col shadow-2xl relative min-h-[500px]">
+        <div className="lg:col-span-8 flex flex-col gap-4">
+          <div className="flex-1 bg-mozi-black border border-mozi-border rounded-3xl overflow-hidden flex flex-col shadow-2xl relative min-h-[360px]">
             <div className="bg-mozi-dark border-b border-mozi-border px-6 py-3 flex items-center justify-between">
               <div className="flex gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
@@ -414,7 +555,7 @@ const XSSLab: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex-grow p-12 relative bg-white dark:bg-[#0d1117] transition-colors overflow-auto">
+            <div className="flex-grow p-6 relative bg-white dark:bg-[#0d1117] transition-colors overflow-auto">
               {/* Browser Environment Metadata */}
               <div className="absolute top-4 right-4 z-20 space-y-2 pointer-events-none">
                 <div className="bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-[10px] font-mono shadow-sm">
@@ -450,7 +591,6 @@ const XSSLab: React.FC = () => {
 
               <div className="text-[#0f172a] dark:text-[#e6edf3] h-full relative z-10 flex flex-col justify-center items-center">
                 <ScenarioRenderer
-                  scenario={scenario}
                   context={context}
                   activePayload={activePayload}
                   isAttacking={isAttacking}
@@ -461,7 +601,7 @@ const XSSLab: React.FC = () => {
           </div>
 
           {/* 源码白盒分析 */}
-          <div className="bg-[#1e1e1e] border border-mozi-border rounded-[2.5rem] p-8 shadow-xl">
+          <div className="bg-[#1e1e1e] border border-mozi-border rounded-3xl p-4 shadow-xl">
             <div className="flex items-center gap-3 mb-4">
               <Code2 className="w-5 h-5 text-mozi-accent" />
               <h3 className="font-bold text-sm text-[#d4d4d4]">
@@ -475,7 +615,6 @@ const XSSLab: React.FC = () => {
             </div>
             <div className="bg-[#1e1e1e] rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed text-[#d4d4d4]">
               <VulnerableCodeViewerPro
-                scenario={scenario}
                 context={context}
                 defenseMode={defenseMode}
               />
@@ -489,13 +628,11 @@ const XSSLab: React.FC = () => {
 
 // --- 新增：场景渲染器 (支持多上下文) ---
 const ScenarioRenderer = ({
-  scenario,
   context,
   activePayload,
   isAttacking,
   defenseMode,
 }: {
-  scenario: XSSScenario;
   context: XSSContext;
   activePayload: string;
   isAttacking: boolean;
@@ -515,12 +652,12 @@ const ScenarioRenderer = ({
   // 渲染逻辑分支：根据 context 改变显示方式
   if (context === "body") {
     return (
-      <div className="text-center space-y-6 w-full max-w-lg">
-        <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-inner">
+      <div className="text-center space-y-3 w-full max-w-lg">
+        <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-inner">
           <h4 className="text-xs font-bold text-slate-400 mb-4 uppercase">
             Server Response
           </h4>
-          <div className="text-2xl font-medium">
+          <div className="text-xl font-medium">
             搜索结果:{" "}
             <XSSInjector
               payload={activePayload}
@@ -535,8 +672,8 @@ const ScenarioRenderer = ({
 
   if (context === "attribute") {
     return (
-      <div className="text-center space-y-6 w-full max-w-lg">
-        <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-inner">
+      <div className="text-center space-y-3 w-full max-w-lg">
+        <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-inner">
           <h4 className="text-xs font-bold text-slate-400 mb-4 uppercase">
             Profile Avatar (Injected in Title)
           </h4>
@@ -558,7 +695,7 @@ const ScenarioRenderer = ({
               </div>
             </div>
           </div>
-          <p className="mt-6 text-sm text-slate-500">
+          <p className="mt-4 text-sm text-slate-500">
             将鼠标悬停在头像上查看 Title 属性注入效果
           </p>
         </div>
@@ -568,8 +705,8 @@ const ScenarioRenderer = ({
 
   if (context === "script") {
     return (
-      <div className="text-center space-y-6 w-full max-w-lg">
-        <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-inner">
+      <div className="text-center space-y-3 w-full max-w-lg">
+        <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-inner">
           <h4 className="text-xs font-bold text-slate-400 mb-4 uppercase">
             Analytics Initialization
           </h4>
@@ -593,7 +730,7 @@ const ScenarioRenderer = ({
             defenseMode={defenseMode}
             className="hidden"
           />
-          <p className="mt-6 text-sm text-slate-500">
+          <p className="mt-4 text-sm text-slate-500">
             输入 Payload 尝试破坏 JS 结构并执行代码
           </p>
         </div>
@@ -603,19 +740,16 @@ const ScenarioRenderer = ({
 
   if (context === "url") {
     return (
-      <div className="text-center space-y-6 w-full max-w-lg">
-        <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-inner">
+      <div className="text-center space-y-3 w-full max-w-lg">
+        <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-inner">
           <h4 className="text-xs font-bold text-slate-400 mb-4 uppercase">
             Redirect Button
           </h4>
           <a
             href={activePayload || "#"}
-            onClick={(e) => {
+            onClick={(event) => {
               if (activePayload.startsWith("javascript:")) {
-                // 模拟浏览器点击 javascript: 协议
-                try {
-                  eval(activePayload.replace("javascript:", ""));
-                } catch (err) {}
+                event.preventDefault();
               }
             }}
             className="inline-flex items-center gap-2 bg-mozi-accent text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:brightness-110"
@@ -671,111 +805,85 @@ const CSPBlockAnimation = ({ onComplete }: { onComplete: () => void }) => (
 
 // --- 专业版源码查看器 ---
 const VulnerableCodeViewerPro = ({
-  scenario,
   context,
   defenseMode,
 }: {
-  scenario: XSSScenario;
   context: XSSContext;
   defenseMode: XSSMode;
 }) => {
-  const Comment = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[#6A9955]">{children}</span>
-  );
-  const Keyword = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[#569cd6]">{children}</span>
-  );
-  const Func = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[#DCDCAA]">{children}</span>
-  );
-  const Str = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[#ce9178]">{children}</span>
-  );
-  const Tag = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[#569cd6]">{children}</span>
-  );
-  const Danger = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-red-400 bg-red-400/10 px-1 rounded">{children}</span>
-  );
-  const Safe = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-green-400 bg-green-400/10 px-1 rounded">
-      {children}
-    </span>
-  );
-
   if (context === "body") {
     return (
       <div>
-        <Comment>// HTML 上下文注入 (最常见)</Comment>
+        <CodeComment>// HTML 上下文注入 (最常见)</CodeComment>
         <br />
-        <Tag>&lt;div&gt;</Tag>
+        <CodeTag>&lt;div&gt;</CodeTag>
         <br />
         &nbsp;&nbsp;搜索结果:
         {defenseMode === "none" ? (
-          <Danger>{"${userInput}"}</Danger>
+          <CodeDanger>{"${userInput}"}</CodeDanger>
         ) : defenseMode === "escape" ? (
-          <Safe>{"escapeHtml(userInput)"}</Safe>
+          <CodeSafe>{"escapeHtml(userInput)"}</CodeSafe>
         ) : (
-          <Danger>{"filter(userInput)"}</Danger>
+          <CodeDanger>{"filter(userInput)"}</CodeDanger>
         )}
         <br />
-        <Tag>&lt;/div&gt;</Tag>
+        <CodeTag>&lt;/div&gt;</CodeTag>
       </div>
     );
   }
   if (context === "attribute") {
     return (
       <div>
-        <Comment>// 属性上下文注入 (需要闭合引号)</Comment>
+        <CodeComment>// 属性上下文注入 (需要闭合引号)</CodeComment>
         <br />
-        <Tag>&lt;div</Tag> class=<Str>"avatar"</Str> title=
+        <CodeTag>&lt;div</CodeTag> class=<CodeString>"avatar"</CodeString> title=
         {defenseMode === "none" ? (
-          <Danger>{'"${userInput}"'}</Danger>
+          <CodeDanger>{'"${userInput}"'}</CodeDanger>
         ) : defenseMode === "escape" ? (
-          <Safe>{'"${encodeAttr(userInput)}"'}</Safe>
+          <CodeSafe>{'"${encodeAttr(userInput)}"'}</CodeSafe>
         ) : (
-          <Danger>{'"${userInput}"'}</Danger>
+          <CodeDanger>{'"${userInput}"'}</CodeDanger>
         )}
-        <Tag>&gt;</Tag>
-        <Tag>&lt;/div&gt;</Tag>
+        <CodeTag>&gt;</CodeTag>
+        <CodeTag>&lt;/div&gt;</CodeTag>
       </div>
     );
   }
   if (context === "script") {
     return (
       <div>
-        <Comment>// JS 上下文注入 (需要闭合代码块)</Comment>
+        <CodeComment>// JS 上下文注入 (需要闭合代码块)</CodeComment>
         <br />
-        <Tag>&lt;script&gt;</Tag>
+        <CodeTag>&lt;script&gt;</CodeTag>
         <br />
-        &nbsp;&nbsp;<Keyword>var</Keyword> config = &#123; name:
+        &nbsp;&nbsp;<CodeKeyword>var</CodeKeyword> config = &#123; name:
         {defenseMode === "none" ? (
-          <Danger>{"'${userInput}'"}</Danger>
+          <CodeDanger>{"'${userInput}'"}</CodeDanger>
         ) : defenseMode === "escape" ? (
-          <Safe>{"'${encodeJS(userInput)}'"}</Safe>
+          <CodeSafe>{"'${encodeJS(userInput)}'"}</CodeSafe>
         ) : (
-          <Danger>{"'${userInput}'"}</Danger>
+          <CodeDanger>{"'${userInput}'"}</CodeDanger>
         )}
         &#125;;
         <br />
-        <Tag>&lt;/script&gt;</Tag>
+        <CodeTag>&lt;/script&gt;</CodeTag>
       </div>
     );
   }
   if (context === "url") {
     return (
       <div>
-        <Comment>// URL 上下文注入 (利用 javascript: 协议)</Comment>
+        <CodeComment>// URL 上下文注入 (利用 javascript: 协议)</CodeComment>
         <br />
-        <Tag>&lt;a</Tag> href=
+        <CodeTag>&lt;a</CodeTag> href=
         {defenseMode === "none" ? (
-          <Danger>{'"${userInput}"'}</Danger>
+          <CodeDanger>{'"${userInput}"'}</CodeDanger>
         ) : defenseMode === "escape" ? (
-          <Safe>{'"${validateURL(userInput)}"'}</Safe>
+          <CodeSafe>{'"${validateURL(userInput)}"'}</CodeSafe>
         ) : (
-          <Danger>{'"${userInput}"'}</Danger>
+          <CodeDanger>{'"${userInput}"'}</CodeDanger>
         )}
-        <Tag>&gt;</Tag>Home<Tag>&lt;/a&gt;</Tag>
+        <CodeTag>&gt;</CodeTag>Home<CodeTag>&lt;/a&gt;</CodeTag>
       </div>
     );
   }

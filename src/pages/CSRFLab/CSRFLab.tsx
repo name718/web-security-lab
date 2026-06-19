@@ -17,11 +17,79 @@ import {
 
 type SameSiteMode = "none" | "lax" | "strict";
 
+const sameSiteExplanations: Record<
+  SameSiteMode,
+  {
+    risk: string;
+    summary: string;
+    cookieDecision: string;
+    serverDecision: string;
+    badgeClass: string;
+  }
+> = {
+  none: {
+    risk: "高危",
+    summary: "跨站 POST 请求会携带登录 Cookie，目标站点可能误判为本人操作。",
+    cookieDecision: "Cookie 将被附加到跨站请求",
+    serverDecision: "服务端看到有效会话，转账请求会被接受",
+    badgeClass: "border-mozi-danger/40 bg-mozi-danger/10 text-mozi-danger",
+  },
+  lax: {
+    risk: "中低风险",
+    summary: "常规跨站表单 POST 不携带 Cookie，但顶级 GET 导航仍可能携带。",
+    cookieDecision: "跨站 POST 不携带 Cookie",
+    serverDecision: "服务端无法确认登录态，拒绝敏感操作",
+    badgeClass: "border-amber-500/40 bg-amber-500/10 text-amber-500",
+  },
+  strict: {
+    risk: "低风险",
+    summary: "任何跨站请求都不携带 Cookie，安全性高但可能影响部分跳转体验。",
+    cookieDecision: "跨站请求完全不携带 Cookie",
+    serverDecision: "服务端收到未认证请求，直接拒绝",
+    badgeClass: "border-mozi-safe/40 bg-mozi-safe/10 text-mozi-safe",
+  },
+};
+
+const csrfTeachingCards = [
+  {
+    title: "漏洞成立条件",
+    items: [
+      "用户已在目标站点登录，浏览器保存了有效会话 Cookie",
+      "目标接口只依赖 Cookie 识别身份，没有验证用户操作意图",
+      "攻击者能诱导浏览器向目标站点发起跨站请求",
+    ],
+  },
+  {
+    title: "防御检查清单",
+    items: [
+      "敏感操作使用不可预测的 CSRF Token，并在服务端校验",
+      "Cookie 设置 SameSite=Lax 或 Strict，生产环境 None 必须配合 Secure",
+      "服务端校验 Origin/Referer，作为辅助防线而不是唯一防线",
+      "转账、改密等高风险操作增加二次确认或重新认证",
+    ],
+  },
+  {
+    title: "常见误区",
+    items: [
+      "CORS 不是 CSRF 防御，简单表单请求不依赖读取响应也能造成影响",
+      "只使用 POST 不等于安全，恶意站点同样可以提交表单",
+      "SameSite 能降低风险，但复杂业务仍需要 Token 和服务端校验",
+    ],
+  },
+];
+
+const csrfReviewQuestions = [
+  "这次攻击成功或失败，决定点发生在浏览器还是服务端？",
+  "如果 SameSite=None，但接口要求 CSRF Token，结果会如何变化？",
+  "为什么攻击者即使读不到响应，也可能造成资金或配置变更？",
+];
+
 const CSRFLab: React.FC = () => {
   const [sameSiteMode, setSameSiteMode] = useState<SameSiteMode>("none");
   const [balance, setBalance] = useState(10000);
   const [isAttacking, setIsAttacking] = useState(false);
   const [attackSuccess, setAttackSuccess] = useState<boolean | null>(null);
+  const activeExplanation = sameSiteExplanations[sameSiteMode];
 
   const resetLab = () => {
     setBalance(10000);
@@ -46,32 +114,37 @@ const CSRFLab: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 transition-colors duration-300 pb-20">
+    <div className="max-w-[1600px] mx-auto space-y-4 transition-colors duration-300 pb-6">
       {/* 头部信息 */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-mozi-border pb-8">
-        <div className="space-y-2">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-mozi-border pb-4">
+        <div className="space-y-1">
           <div className="flex items-center gap-3 text-mozi-safe text-glow">
-            <Fingerprint className="w-6 h-6" />
-            <span className="font-mono text-sm tracking-widest uppercase">
+            <Fingerprint className="w-5 h-5" />
+            <span className="font-mono text-xs tracking-widest uppercase">
               LAB_02 / AUTH_EXPLOITATION
             </span>
           </div>
-          <h1 className="text-5xl font-black tracking-tight text-mozi-text">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-mozi-text">
             CSRF 跨站请求伪造
           </h1>
-          <p className="text-mozi-text-muted max-w-2xl">
+          <p className="text-sm text-mozi-text-muted max-w-2xl">
             CSRF 攻击利用了浏览器“自动携带 Cookie”的特性。当用户在 A
             网站保持登录状态时，访问恶意网站 B，B 网站会在后台偷偷向 A
             网站发送请求。
           </p>
+          <div
+            className={`mt-4 inline-flex rounded-full border px-4 py-2 text-xs font-bold ${activeExplanation.badgeClass}`}
+          >
+            当前风险：{activeExplanation.risk} · {activeExplanation.summary}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* 控制面板 */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-mozi-dark border border-mozi-border rounded-[2.5rem] p-8 space-y-8 shadow-lg">
-            <div className="flex items-center gap-3 border-b border-mozi-border pb-4">
+        <div className="lg:col-span-4 space-y-3">
+          <div className="bg-mozi-dark border border-mozi-border rounded-3xl p-4 space-y-4 shadow-lg">
+            <div className="flex items-center gap-3 border-b border-mozi-border pb-3">
               <Settings className="w-5 h-5 text-mozi-safe" />
               <h3 className="font-bold uppercase text-sm tracking-tighter">
                 防御配置 (Cookie 属性)
@@ -82,7 +155,7 @@ const CSRFLab: React.FC = () => {
               <label className="text-xs font-mono text-mozi-text-muted uppercase tracking-widest">
                 SameSite 策略
               </label>
-              <div className="grid gap-3">
+              <div className="grid gap-2">
                 {[
                   {
                     id: "none",
@@ -109,7 +182,7 @@ const CSRFLab: React.FC = () => {
                       setSameSiteMode(mode.id as SameSiteMode);
                       resetLab();
                     }}
-                    className={`p-4 rounded-2xl border text-left transition-all ${
+                    className={`p-3 rounded-2xl border text-left transition-all ${
                       sameSiteMode === mode.id
                         ? "bg-mozi-black border-mozi-safe/50 ring-1 ring-offset-2 ring-offset-mozi-black ring-mozi-safe"
                         : "border-transparent bg-mozi-black/20 opacity-60 hover:opacity-100 hover:bg-mozi-black/40"
@@ -136,7 +209,7 @@ const CSRFLab: React.FC = () => {
             <button
               onClick={handleAttack}
               disabled={isAttacking}
-              className="w-full py-5 rounded-2xl bg-mozi-safe text-black font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 flex items-center justify-center gap-3"
+              className="w-full py-3 rounded-2xl bg-mozi-safe text-black font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 flex items-center justify-center gap-3"
             >
               {isAttacking ? (
                 <RefreshCcw className="w-5 h-5 animate-spin" />
@@ -147,7 +220,7 @@ const CSRFLab: React.FC = () => {
             </button>
           </div>
 
-          <div className="bg-mozi-dark border border-mozi-border rounded-3xl p-8 shadow-lg">
+          <div className="bg-mozi-dark border border-mozi-border rounded-3xl p-4 shadow-lg">
             <h4 className="text-xs font-mono text-mozi-text-muted uppercase tracking-widest mb-4">
               执行状态分析
             </h4>
@@ -168,18 +241,80 @@ const CSRFLab: React.FC = () => {
                   SameSite={sameSiteMode.toUpperCase()}
                 </span>
               </div>
+              <div className="rounded-xl border border-mozi-border bg-mozi-black p-4">
+                <div className="mb-3 text-[10px] uppercase tracking-widest text-mozi-text-muted">
+                  Browser Decision Chain
+                </div>
+                <div className="space-y-3">
+                  {[
+                    ["1", "跨站请求来源", "evil-site.com -> secure-bank.com"],
+                    ["2", "Cookie 判定", activeExplanation.cookieDecision],
+                    ["3", "服务端结果", activeExplanation.serverDecision],
+                  ].map(([step, label, value]) => (
+                    <div key={step} className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mozi-dark text-[10px] text-mozi-safe">
+                        {step}
+                      </span>
+                      <div>
+                        <div className="text-mozi-text">{label}</div>
+                        <div className="text-[10px] leading-5 text-mozi-text-muted">
+                          {value}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
+
+          <details className="rounded-3xl border border-mozi-border bg-mozi-dark p-4">
+            <summary className="cursor-pointer text-sm font-black text-mozi-text">
+              教学要点 / 防御清单 / 复盘问题
+            </summary>
+            <div className="mt-4 space-y-4">
+              {csrfTeachingCards.map((card) => (
+                <div key={card.title}>
+                  <h4 className="mb-3 text-xs font-black text-mozi-text">
+                    {card.title}
+                  </h4>
+                  <div className="space-y-2">
+                    {card.items.map((item) => (
+                      <div key={item} className="flex gap-2 text-xs leading-5">
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-mozi-safe" />
+                        <span className="text-mozi-text-muted">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="rounded-2xl border border-mozi-safe/30 bg-mozi-safe/10 p-3">
+                <h4 className="mb-3 text-xs font-black text-mozi-safe">
+                  复盘问题
+                </h4>
+                <div className="space-y-2">
+                  {csrfReviewQuestions.map((question, index) => (
+                    <div
+                      key={question}
+                      className="rounded-xl border border-mozi-border bg-mozi-black/60 p-2 text-xs leading-5 text-mozi-text-muted"
+                    >
+                      Q{index + 1}. {question}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
 
         {/* 模拟舞台：双屏视图 */}
-        <div className="lg:col-span-8 bg-mozi-black border border-mozi-border rounded-[3rem] p-8 shadow-2xl relative overflow-hidden flex flex-col gap-8 min-h-[800px]">
+        <div className="lg:col-span-8 bg-mozi-black border border-mozi-border rounded-3xl p-4 shadow-2xl relative overflow-hidden grid gap-4 lg:grid-cols-2 min-h-[420px]">
           <AnimatePresence>
             {isAttacking && <AttackAnimation mode={sameSiteMode} />}
           </AnimatePresence>
 
           {/* 目标网站 (银行) */}
-          <div className="flex-1 bg-[#f8fafc] dark:bg-[#0d1117] rounded-3xl border border-mozi-border overflow-hidden flex flex-col relative z-10">
+          <div className="bg-[#f8fafc] dark:bg-[#0d1117] rounded-3xl border border-mozi-border overflow-hidden flex flex-col relative z-10 min-h-[360px]">
             <div className="bg-mozi-safe/10 border-b border-mozi-safe/20 px-6 py-3 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Lock className="w-4 h-4 text-mozi-safe" />
@@ -194,20 +329,20 @@ const CSRFLab: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex-1 p-8 flex flex-col items-center justify-center">
-              <div className="text-center space-y-6">
-                <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-blue-200 dark:border-blue-800">
-                  <Database className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+            <div className="flex-1 p-5 flex flex-col items-center justify-center">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-2 border-4 border-blue-200 dark:border-blue-800">
+                  <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                 </div>
-                <h2 className="text-3xl font-black text-slate-800 dark:text-slate-200">
+                <h2 className="text-2xl font-black text-slate-800 dark:text-slate-200">
                   我的账户
                 </h2>
-                <div className="p-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-sm min-w-[300px]">
+                <div className="p-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-sm min-w-[260px]">
                   <p className="text-slate-500 dark:text-slate-400 text-sm mb-2 uppercase tracking-widest font-mono">
                     可用余额
                   </p>
                   <p
-                    className={`text-5xl font-mono font-black ${balance === 0 ? "text-mozi-danger" : "text-slate-800 dark:text-slate-100"}`}
+                    className={`text-4xl font-mono font-black ${balance === 0 ? "text-mozi-danger" : "text-slate-800 dark:text-slate-100"}`}
                   >
                     ${balance.toLocaleString()}
                   </p>
@@ -217,7 +352,7 @@ const CSRFLab: React.FC = () => {
           </div>
 
           {/* 恶意网站 (诱导页) */}
-          <div className="flex-1 bg-[#fff1f2] dark:bg-[#1a0f14] rounded-3xl border border-mozi-border overflow-hidden flex flex-col relative z-10">
+          <div className="bg-[#fff1f2] dark:bg-[#1a0f14] rounded-3xl border border-mozi-border overflow-hidden flex flex-col relative z-10 min-h-[360px]">
             <div className="bg-mozi-danger/10 border-b border-mozi-danger/20 px-6 py-3 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-mozi-danger" />
@@ -228,9 +363,9 @@ const CSRFLab: React.FC = () => {
               <Ghost className="w-4 h-4 text-mozi-danger opacity-50" />
             </div>
 
-            <div className="flex-1 p-8 flex flex-col items-center justify-center relative">
-              <div className="max-w-md text-center space-y-6 relative z-10">
-                <h2 className="text-3xl font-black text-rose-600 dark:text-rose-400">
+            <div className="flex-1 p-5 flex flex-col items-center justify-center relative">
+              <div className="max-w-md text-center space-y-4 relative z-10">
+                <h2 className="text-2xl font-black text-rose-600 dark:text-rose-400">
                   🎉 恭喜您中奖了！
                 </h2>
                 <p className="text-rose-500/80 dark:text-rose-300/80">
